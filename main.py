@@ -1,47 +1,35 @@
-import customtkinter as ctk
-from google import genai
-from google.genai import types
 import threading
 import queue
-from tkinter import messagebox
-import os
 import time
 import traceback
-from dotenv import load_dotenv
+from tkinter import messagebox
+import customtkinter as ctk
 
-# ВАЖНО: Тук внасяме данните от другия файл
+import config
+from ai_service import AIService
 from data import LIBRARY
 
-# --- 1. НАСТРОЙКИ ---
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
+# --- APP SETUP ---
+config.setup_appearance()
 
-if not API_KEY:
-    print("!!! GRESKA: Ne e nameren GOOGLE_API_KEY v .env faila!")
-
-# --- 2. ПРИЛОЖЕНИЕ ---
 class ChatApp(ctk.CTk):
     def __init__(self):
         super().__init__()
 
-        self.title("LiteraPlay - Интерактивна Литература")
-        self.geometry("600x800")
-        ctk.set_appearance_mode("Dark")
+        self.title(config.TITLE)
+        self.geometry(config.WINDOW_SIZE)
         
-        # Настройки на AI
-        # Използваме модерен модел по подразбиране
-        self.model_name = "gemini-3-flash-preview" 
-        self.client = None
+        # AI Service Init
+        self.ai_service = None
         self.api_configured = False
 
-        if API_KEY:
+        if config.API_KEY:
             try:
-                # MODERN CLIENT INITIALIZATION
-                self.client = genai.Client(api_key=API_KEY)
+                self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
                 self.api_configured = True
-                print("Modern genai.Client configured successfully.")
+                print(f"AIService initialized with model: {config.DEFAULT_MODEL}")
             except Exception as e:
-                print(f"Error init client: {e}")
+                print(f"Error init AIService: {e}")
 
         if not self.api_configured:
             print("API not configured: missing or invalid GOOGLE_API_KEY")
@@ -50,14 +38,13 @@ class ChatApp(ctk.CTk):
             except Exception:
                 pass
 
-        # Основен контейнер за смяна на екрани
+        # Main Container
         self.main_container = ctk.CTkFrame(self)
         self.main_container.pack(fill="both", expand=True)
 
-        # Показваме менюто
         self.show_menu()
 
-    # ================== ЕКРАН: МЕНЮ ==================
+    # ================== SCREEN: MENU ==================
     def show_menu(self):
         for widget in self.main_container.winfo_children():
             widget.destroy()
@@ -80,21 +67,21 @@ class ChatApp(ctk.CTk):
                                 command=lambda k=key: self.start_chat(k))
             btn.pack(pady=(0, 15))
 
-    # ================== ЕКРАН: ЧАТ ==================
+    # ================== SCREEN: CHAT ==================
     def start_chat(self, work_key):
         self.current_work = LIBRARY[work_key]
         
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
-        # Инициализация на сесията
-        self.chat_history = []
+        # Session Init
         self.chat = None
         self.request_queue = queue.Queue()
 
         if self.api_configured:
             try:
-                self.init_chat_session()
+                self.chat = self.ai_service.create_chat(self.current_work['prompt'])
+                print(f"Chat session started for: {self.current_work['character']}")
             except Exception as e:
                 print(f"Session error: {e}")
                 traceback.print_exc()
@@ -102,7 +89,7 @@ class ChatApp(ctk.CTk):
 
         threading.Thread(target=self.request_worker, daemon=True).start()
 
-        # --- UI Компоненти ---
+        # --- UI Components ---
         header_frame = ctk.CTkFrame(self.main_container, height=50, fg_color="#222")
         header_frame.pack(fill="x", side="top")
 
@@ -143,32 +130,9 @@ class ChatApp(ctk.CTk):
         start_msg = self.current_work.get('first_message', 'Здравей!')
         self.add_message(self.current_work['character'], start_msg, is_user=False)
 
-    def init_chat_session(self):
-        """Initializes the chat using the modern Google GenAI Client."""
-        try:
-            # Create the chat config
-            # Note: System instructions in the new SDK are often passed in the config or at create time
-            config = types.GenerateContentConfig(
-                temperature=0.7,
-                system_instruction=self.current_work['prompt']
-            )
-            
-            # Create the chat session
-            self.chat = self.client.chats.create(
-                model=self.model_name,
-                config=config,
-                history=[]
-            )
-            print(f"Chat session started with model: {self.model_name}")
-            
-        except Exception as e:
-            print(f"Failed to start chat session: {e}")
-            traceback.print_exc()
-            self.update_ui("Няма връзка с AI. Грешка при стартиране.")
-
     def add_message(self, sender, text, is_user=True):
         align = "e" if is_user else "w"
-        color = "#1F6AA5" if is_user else "#333333"
+        color = config.COLOR_USER_BUBBLE if is_user else config.COLOR_AI_BUBBLE
         
         msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
         msg_frame.pack(fill="x", pady=5)
@@ -200,30 +164,22 @@ class ChatApp(ctk.CTk):
             if text: self.get_ai_response(text)
 
     def get_ai_response(self, user_text):
-        if not self.chat:
+        if not self.chat or not self.ai_service:
             self.update_ui("Няма активна AI сесия.")
             return
 
-        max_retries = 3
-        retry_delay = 2 
+        try:
+            # Using AIService to send message
+            response_text = self.ai_service.send_message(
+                self.chat,
+                user_text,
+                status_callback=lambda msg: self.update_ui(msg)
+            )
+            self.update_ui(response_text)
 
-        for attempt in range(max_retries):
-            try:
-                # Modern SDK call
-                response = self.chat.send_message(user_text)
-                self.update_ui(response.text)
-                return  # Success
-
-            except Exception as e:
-                err_msg = str(e)
-                if "429" in err_msg and attempt < max_retries - 1:
-                    self.update_ui(f"Претоварено. Опит {attempt + 1} след {retry_delay} сек...")
-                    time.sleep(retry_delay)
-                    retry_delay *= 2
-                else:
-                    self.update_ui(f"Грешка: {e}")
-                    print(f"API Error: {e}")
-                    break
+        except Exception as e:
+            self.update_ui(f"Грешка: {e}")
+            print(f"API Error: {e}")
 
     def update_ui(self, text):
         self.main_container.after(0, lambda: self.add_message(self.current_work['character'], text, is_user=False))
