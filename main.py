@@ -30,7 +30,7 @@ class ChatApp(ctk.CTk):
         
         # Настройки на AI
         # Използваме модерен модел по подразбиране
-        self.model_name = "gemini-flash-latest" 
+        self.model_name = "gemini-3-flash-preview" 
         self.client = None
         self.api_configured = False
 
