@@ -22,7 +22,7 @@ class AIService:
             logging.error(f"Failed to initialize GenAI client: {e}")
             raise
 
-    def create_chat(self, system_instruction: str):
+    def create_chat(self, system_instruction: str, response_mime_type: str = "application/json"):
         """Creates a new chat session with the given system instruction."""
         if not self.client:
             raise RuntimeError("Client not initialized")
@@ -30,7 +30,8 @@ class AIService:
         try:
             config = types.GenerateContentConfig(
                 temperature=0.7,
-                system_instruction=system_instruction
+                system_instruction=system_instruction,
+                response_mime_type=response_mime_type
             )
             chat = self.client.chats.create(
                 model=self.model_name,

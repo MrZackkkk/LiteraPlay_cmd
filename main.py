@@ -2,6 +2,8 @@ import threading
 import queue
 import time
 import traceback
+import json
+import re
 from tkinter import messagebox
 import customtkinter as ctk
 
@@ -102,11 +104,12 @@ class ChatApp(ctk.CTk):
                                   font=("Roboto", 16, "bold"))
         lbl_header.pack(side="left", padx=10)
 
-        lbl_intro = ctk.CTkLabel(self.main_container, text=self.current_work['intro'], text_color="gray", wraplength=500)
-        lbl_intro.pack(pady=10)
-
         self.chat_frame = ctk.CTkScrollableFrame(self.main_container)
         self.chat_frame.pack(pady=5, padx=10, fill="both", expand=True)
+
+        self.loading_label = None
+
+        self.add_message("System", self.current_work['intro'], is_user=False, msg_type="system")
 
         self.options_frame = ctk.CTkFrame(self.main_container, height=80, fg_color="transparent")
         self.options_frame.pack(fill="x", padx=10, pady=5)
@@ -130,21 +133,44 @@ class ChatApp(ctk.CTk):
         start_msg = self.current_work.get('first_message', 'Здравей!')
         self.add_message(self.current_work['character'], start_msg, is_user=False)
 
-    def add_message(self, sender, text, is_user=True):
-        align = "e" if is_user else "w"
-        color = config.COLOR_USER_BUBBLE if is_user else config.COLOR_AI_BUBBLE
-        
-        msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
-        msg_frame.pack(fill="x", pady=5)
-        
-        name_lbl = ctk.CTkLabel(msg_frame, text=sender, font=("Arial", 10), text_color="silver")
-        name_lbl.pack(anchor=align, padx=15)
+    def add_message(self, sender, text, is_user=True, msg_type="normal"):
+        if msg_type == "system":
+            msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
+            msg_frame.pack(fill="x", pady=5)
 
-        bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=15, 
-                              wraplength=400, padx=15, pady=10, font=("Arial", 14))
-        bubble.pack(anchor=align, padx=10)
+            bubble = ctk.CTkLabel(msg_frame, text=text, text_color="gray",
+                                  wraplength=480, padx=15, pady=5, font=("Arial", 12, "italic"))
+            bubble.pack(anchor="center")
+
+        else:
+            align = "e" if is_user else "w"
+            color = config.COLOR_USER_BUBBLE if is_user else config.COLOR_AI_BUBBLE
+
+            msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
+            msg_frame.pack(fill="x", pady=5)
+
+            name_lbl = ctk.CTkLabel(msg_frame, text=sender, font=("Arial", 10), text_color="silver")
+            name_lbl.pack(anchor=align, padx=15)
+
+            bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=15,
+                                  wraplength=450, padx=15, pady=10, font=("Arial", 14))
+            bubble.pack(anchor=align, padx=10)
         
         self.main_container.after(10, lambda: self._scroll_down())
+
+    def show_loading(self, character_name):
+        if self.loading_label:
+            return
+        
+        msg = f"{character_name} си мисли..."
+        self.loading_label = ctk.CTkLabel(self.chat_frame, text=msg, font=("Arial", 12, "italic"), text_color="gray")
+        self.loading_label.pack(anchor="w", padx=20, pady=5)
+        self.main_container.after(10, lambda: self._scroll_down())
+
+    def hide_loading(self):
+        if self.loading_label:
+            self.loading_label.destroy()
+            self.loading_label = None
 
     def _scroll_down(self):
         try: self.chat_frame._parent_canvas.yview_moveto(1.0)
@@ -168,6 +194,8 @@ class ChatApp(ctk.CTk):
             self.update_ui("Няма активна AI сесия.")
             return
 
+        self.main_container.after(0, lambda: self.show_loading(self.current_work['character']))
+
         try:
             # Using AIService to send message
             response_text = self.ai_service.send_message(
@@ -175,14 +203,51 @@ class ChatApp(ctk.CTk):
                 user_text,
                 status_callback=lambda msg: self.update_ui(msg)
             )
-            self.update_ui(response_text)
+            self.main_container.after(0, self.hide_loading)
+
+            # Parse JSON
+            try:
+                # Attempt to find JSON object in text (handling potential extra text)
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(0))
+                    reply = data.get("reply", response_text)
+                    options = data.get("options", [])
+                else:
+                    # Fallback if no JSON structure found
+                    reply = response_text
+                    options = []
+
+                self.update_ui(reply)
+                self.main_container.after(0, lambda: self.update_buttons(options))
+
+            except json.JSONDecodeError:
+                # Fallback on JSON error
+                self.update_ui(response_text)
+                self.main_container.after(0, lambda: self.update_buttons([]))
 
         except Exception as e:
+            self.main_container.after(0, self.hide_loading)
             self.update_ui(f"Грешка: {e}")
             print(f"API Error: {e}")
 
     def update_ui(self, text):
         self.main_container.after(0, lambda: self.add_message(self.current_work['character'], text, is_user=False))
+
+    def update_buttons(self, options_list):
+        # Clear existing buttons
+        for widget in self.options_frame.winfo_children():
+            widget.destroy()
+
+        if not options_list:
+            return
+
+        # Create new buttons
+        for text in options_list:
+            btn = ctk.CTkButton(self.options_frame, text=text,
+                                fg_color=self.current_work['color'], height=25,
+                                command=lambda t=text: self.send_message(t))
+            btn.pack(pady=2, fill="x")
 
 if __name__ == "__main__":
     app = ChatApp()
