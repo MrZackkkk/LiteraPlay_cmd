@@ -1,17 +1,13 @@
-import os
-from dotenv import load_dotenv
+import config
 from google import genai
 
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_API_KEY")
-
-if not API_KEY:
-    print("Error: GOOGLE_API_KEY not found.")
+if not config.API_KEY:
+    print("Error: GOOGLE_API_KEY not found in config.")
     exit()
 
 print("Checking models...")
 try:
-    client = genai.Client(api_key=API_KEY)
+    client = genai.Client(api_key=config.API_KEY)
     
     print("\n--- AVAILABLE MODELS ---")
     # We will list everything safely without complex filtering
