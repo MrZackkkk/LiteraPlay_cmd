@@ -2,6 +2,8 @@ import threading
 import queue
 import time
 import traceback
+import json
+import re
 from tkinter import messagebox
 import customtkinter as ctk
 
@@ -202,7 +204,27 @@ class ChatApp(ctk.CTk):
                 status_callback=lambda msg: self.update_ui(msg)
             )
             self.main_container.after(0, self.hide_loading)
-            self.update_ui(response_text)
+
+            # Parse JSON
+            try:
+                # Attempt to find JSON object in text (handling potential extra text)
+                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                if json_match:
+                    data = json.loads(json_match.group(0))
+                    reply = data.get("reply", response_text)
+                    options = data.get("options", [])
+                else:
+                    # Fallback if no JSON structure found
+                    reply = response_text
+                    options = []
+
+                self.update_ui(reply)
+                self.main_container.after(0, lambda: self.update_buttons(options))
+
+            except json.JSONDecodeError:
+                # Fallback on JSON error
+                self.update_ui(response_text)
+                self.main_container.after(0, lambda: self.update_buttons([]))
 
         except Exception as e:
             self.main_container.after(0, self.hide_loading)
@@ -211,6 +233,21 @@ class ChatApp(ctk.CTk):
 
     def update_ui(self, text):
         self.main_container.after(0, lambda: self.add_message(self.current_work['character'], text, is_user=False))
+
+    def update_buttons(self, options_list):
+        # Clear existing buttons
+        for widget in self.options_frame.winfo_children():
+            widget.destroy()
+
+        if not options_list:
+            return
+
+        # Create new buttons
+        for text in options_list:
+            btn = ctk.CTkButton(self.options_frame, text=text,
+                                fg_color=self.current_work['color'], height=25,
+                                command=lambda t=text: self.send_message(t))
+            btn.pack(pady=2, fill="x")
 
 if __name__ == "__main__":
     app = ChatApp()
