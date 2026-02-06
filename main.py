@@ -104,31 +104,34 @@ class ChatApp(ctk.CTk):
                                   font=("Roboto", 16, "bold"))
         lbl_header.pack(side="left", padx=10)
 
+        # Input Area (Bottom)
+        input_frame = ctk.CTkFrame(self.main_container, fg_color="#222", corner_radius=20)
+        input_frame.pack(side="bottom", fill="x", padx=15, pady=(5, 15))
+
+        self.btn_send = ctk.CTkButton(input_frame, text="➤", width=40, height=35, command=self.send_message)
+        self.btn_send.pack(side="right", padx=(5, 10), pady=10)
+
+        self.entry = ctk.CTkEntry(input_frame, placeholder_text="Напиши нещо...", height=35, border_width=0, fg_color="#333")
+        self.entry.pack(side="left", fill="x", expand=True, padx=(15, 5), pady=10)
+        self.entry.bind("<Return>", lambda event: self.send_message())
+
+        # Options Area (Bottom, above Input)
+        self.options_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        self.options_frame.pack(side="bottom", fill="x", padx=15, pady=5)
+        
+        for text in self.current_work['choices']:
+            btn = ctk.CTkButton(self.options_frame, text=text, 
+                                fg_color=self.current_work['color'], height=30,
+                                command=lambda t=text: self.send_message(t))
+            btn.pack(pady=2, fill="x")
+
+        # Chat Frame (Remaining space)
         self.chat_frame = ctk.CTkScrollableFrame(self.main_container)
-        self.chat_frame.pack(pady=5, padx=10, fill="both", expand=True)
+        self.chat_frame.pack(side="top", pady=5, padx=10, fill="both", expand=True)
 
         self.loading_label = None
 
         self.add_message("System", self.current_work['intro'], is_user=False, msg_type="system")
-
-        self.options_frame = ctk.CTkFrame(self.main_container, height=80, fg_color="transparent")
-        self.options_frame.pack(fill="x", padx=10, pady=5)
-        
-        for text in self.current_work['choices']:
-            btn = ctk.CTkButton(self.options_frame, text=text, 
-                                fg_color=self.current_work['color'], height=25,
-                                command=lambda t=text: self.send_message(t))
-            btn.pack(pady=2, fill="x")
-
-        input_frame = ctk.CTkFrame(self.main_container)
-        input_frame.pack(pady=10, padx=10, fill="x")
-
-        self.entry = ctk.CTkEntry(input_frame, placeholder_text="Напиши нещо...")
-        self.entry.pack(side="left", fill="x", expand=True, padx=10, pady=10)
-        self.entry.bind("<Return>", lambda event: self.send_message())
-
-        btn_send = ctk.CTkButton(input_frame, text="➤", width=40, command=self.send_message)
-        btn_send.pack(side="right", padx=10)
 
         start_msg = self.current_work.get('first_message', 'Здравей!')
         self.add_message(self.current_work['character'], start_msg, is_user=False)
@@ -152,25 +155,31 @@ class ChatApp(ctk.CTk):
             name_lbl = ctk.CTkLabel(msg_frame, text=sender, font=("Arial", 10), text_color="silver")
             name_lbl.pack(anchor=align, padx=15)
 
-            bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=15,
-                                  wraplength=450, padx=15, pady=10, font=("Arial", 14))
+            bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=20,
+                                  wraplength=450, padx=20, pady=12, font=("Arial", 14))
             bubble.pack(anchor=align, padx=10)
         
         self.main_container.after(10, lambda: self._scroll_down())
 
-    def show_loading(self, character_name):
-        if self.loading_label:
-            return
-        
-        msg = f"{character_name} си мисли..."
-        self.loading_label = ctk.CTkLabel(self.chat_frame, text=msg, font=("Arial", 12, "italic"), text_color="gray")
-        self.loading_label.pack(anchor="w", padx=20, pady=5)
-        self.main_container.after(10, lambda: self._scroll_down())
+    def set_loading_state(self, is_loading):
+        if is_loading:
+            self.entry.configure(state="disabled")
+            self.btn_send.configure(state="disabled")
 
-    def hide_loading(self):
-        if self.loading_label:
-            self.loading_label.destroy()
-            self.loading_label = None
+            if not self.loading_label:
+                msg = f"{self.current_work['character']} пише..."
+                self.loading_label = ctk.CTkLabel(self.chat_frame, text=msg,
+                                                  font=("Arial", 12, "italic"), text_color="gray")
+                self.loading_label.pack(anchor="w", padx=20, pady=5)
+                self.main_container.after(10, lambda: self._scroll_down())
+        else:
+            self.entry.configure(state="normal")
+            self.btn_send.configure(state="normal")
+            self.entry.focus()
+
+            if self.loading_label:
+                self.loading_label.destroy()
+                self.loading_label = None
 
     def _scroll_down(self):
         try: self.chat_frame._parent_canvas.yview_moveto(1.0)
@@ -194,7 +203,7 @@ class ChatApp(ctk.CTk):
             self.update_ui("Няма активна AI сесия.")
             return
 
-        self.main_container.after(0, lambda: self.show_loading(self.current_work['character']))
+        self.main_container.after(0, lambda: self.set_loading_state(True))
 
         try:
             # Using AIService to send message
@@ -203,38 +212,54 @@ class ChatApp(ctk.CTk):
                 user_text,
                 status_callback=lambda msg: self.update_ui(msg)
             )
-            self.main_container.after(0, self.hide_loading)
+            self.main_container.after(0, lambda: self.set_loading_state(False))
 
             # Parse JSON
+            data = None
             try:
-                # Attempt to find JSON object in text (handling potential extra text)
-                json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                if json_match:
-                    data = json.loads(json_match.group(0))
-                    reply = data.get("reply", response_text)
-                    options = data.get("options", [])
-                else:
-                    # Fallback if no JSON structure found
-                    reply = response_text
-                    options = []
+                # 1. Try to parse directly (best case)
+                data = json.loads(response_text)
+            except json.JSONDecodeError:
+                # 2. Try to clean markdown
+                cleaned_text = response_text.strip()
+                if cleaned_text.startswith("```json"):
+                    cleaned_text = cleaned_text[7:]
+                elif cleaned_text.startswith("```"):
+                    cleaned_text = cleaned_text[3:]
+                if cleaned_text.endswith("```"):
+                    cleaned_text = cleaned_text[:-3]
+
+                try:
+                    data = json.loads(cleaned_text.strip())
+                except json.JSONDecodeError:
+                    # 3. Fallback: Search for JSON object using regex
+                    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
+                    if json_match:
+                        try:
+                            data = json.loads(json_match.group(0))
+                        except:
+                            data = None
+
+            if data and isinstance(data, dict):
+                reply = data.get("reply", response_text)
+                options = data.get("options", [])
 
                 self.update_ui(reply)
-                self.main_container.after(0, lambda: self.update_buttons(options))
-
-            except json.JSONDecodeError:
-                # Fallback on JSON error
+                self.main_container.after(0, lambda: self.update_choices(options))
+            else:
+                # Fallback if no valid JSON structure found
                 self.update_ui(response_text)
-                self.main_container.after(0, lambda: self.update_buttons([]))
+                self.main_container.after(0, lambda: self.update_choices([]))
 
         except Exception as e:
-            self.main_container.after(0, self.hide_loading)
+            self.main_container.after(0, lambda: self.set_loading_state(False))
             self.update_ui(f"Грешка: {e}")
             print(f"API Error: {e}")
 
     def update_ui(self, text):
         self.main_container.after(0, lambda: self.add_message(self.current_work['character'], text, is_user=False))
 
-    def update_buttons(self, options_list):
+    def update_choices(self, options_list):
         # Clear existing buttons
         for widget in self.options_frame.winfo_children():
             widget.destroy()
@@ -245,7 +270,7 @@ class ChatApp(ctk.CTk):
         # Create new buttons
         for text in options_list:
             btn = ctk.CTkButton(self.options_frame, text=text,
-                                fg_color=self.current_work['color'], height=25,
+                                fg_color=self.current_work['color'], height=30,
                                 command=lambda t=text: self.send_message(t))
             btn.pack(pady=2, fill="x")
 
