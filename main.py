@@ -7,33 +7,16 @@ from tkinter import messagebox
 import customtkinter as ctk
 
 import config
-from ai_service import AIService
+from ai_service import AIService, validate_api_key_with_available_sdk
 from data import LIBRARY
-
-try:
-    import google.genai as genai
-except ImportError:
-    genai = None
 
 # --- APP SETUP ---
 config.setup_appearance()
 
 
 def validate_api_key(key: str):
-    """Validate key when possible; allow saving when local SDK validation is unavailable."""
-    cleaned_key = (key or "").strip()
-    if not cleaned_key:
-        return False, "Моля, въведете API ключ."
-
-    if genai is None:
-        return True, "Локална проверка не е налична (google-genai липсва). Може да запазите ключа."
-
-    try:
-        client = genai.Client(api_key=cleaned_key)
-        next(iter(client.models.list()), None)
-        return True, "Ключът е валиден."
-    except Exception as exc:
-        return False, f"Невалиден ключ или проблем с API: {exc}"
+    """Validate key against whichever Gemini SDK is available."""
+    return validate_api_key_with_available_sdk(key)
 
 
 class APIKeyWindow(ctk.CTk):
