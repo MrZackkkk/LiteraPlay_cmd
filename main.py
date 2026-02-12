@@ -94,6 +94,17 @@ class APIKeyWindow(ctk.CTk):
 
     def _handle_validation_result(self, is_valid: bool, message: str, key: str):
         if is_valid:
+            should_save = messagebox.askyesno(
+                "Потвърждение",
+                "API ключът е валиден. Искате ли да го запазите в .env файла?",
+                parent=self,
+            )
+
+            if not should_save:
+                self.status_label.configure(text="Ключът е валиден. Записът е отказан.", text_color="orange")
+                self.verify_btn.configure(state="normal", text="Verify & Save")
+                return
+
             try:
                 config.save_api_key(key)
                 self.saved = True
