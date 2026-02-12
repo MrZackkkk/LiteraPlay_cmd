@@ -4,7 +4,9 @@ import traceback
 import json
 import re
 from tkinter import messagebox
-import customtkinter as ctk
+from dependency_compat import load_customtkinter
+
+ctk = load_customtkinter()
 
 import config
 from ai_service import AIService, validate_api_key_with_available_sdk
@@ -163,7 +165,7 @@ class ChatApp(ctk.CTk):
         self.chat = None
         self.request_queue = queue.Queue()
 
-        if self.api_configured:
+        if self.api_configured and self.ai_service is not None:
             try:
                 self.chat = self.ai_service.create_chat(self.current_work['prompt'])
                 print(f"Chat session started for: {self.current_work['character']}")

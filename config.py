@@ -1,6 +1,8 @@
 import os
-from dotenv import load_dotenv, set_key
-import customtkinter as ctk
+from dependency_compat import load_customtkinter, load_dotenv_functions
+
+load_dotenv, set_key = load_dotenv_functions()
+ctk = load_customtkinter()
 
 # Load environment variables
 load_dotenv()
