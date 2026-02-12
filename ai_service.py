@@ -13,6 +13,55 @@ except ImportError as exc:  # pragma: no cover - triggered only in broken enviro
 else:
     GENAI_IMPORT_ERROR = None
 
+try:
+    import google.generativeai as legacy_genai
+except ImportError as exc:  # pragma: no cover - triggered only when legacy SDK is absent
+    legacy_genai = None
+    LEGACY_GENAI_IMPORT_ERROR = exc
+else:
+    LEGACY_GENAI_IMPORT_ERROR = None
+
+
+class _LegacyChatAdapter:
+    """Adapter that exposes the same send_message().text shape used by the new SDK."""
+
+    def __init__(self, chat_session):
+        self._chat_session = chat_session
+
+    def send_message(self, text: str):
+        response = self._chat_session.send_message(text)
+        if getattr(response, "text", None) is None:
+            response.text = ""
+        return response
+
+
+def validate_api_key_with_available_sdk(key: str) -> tuple[bool, str]:
+    """Validate API key through whichever Gemini SDK is available locally."""
+    cleaned_key = (key or "").strip()
+    if not cleaned_key:
+        return False, "Моля, въведете API ключ."
+
+    if genai is not None:
+        try:
+            client = genai.Client(api_key=cleaned_key)
+            next(iter(client.models.list()), None)
+            return True, "Ключът е валиден."
+        except Exception as exc:
+            return False, f"Невалиден ключ или проблем с API: {exc}"
+
+    if legacy_genai is not None:
+        try:
+            legacy_genai.configure(api_key=cleaned_key)
+            next(iter(legacy_genai.list_models()), None)
+            return True, "Ключът е валиден."
+        except Exception as exc:
+            return False, f"Невалиден ключ или проблем с API: {exc}"
+
+    return False, (
+        "Не е намерен Gemini SDK. Инсталирай `pip install -U google-genai` "
+        "(или като временен вариант `pip install -U google-generativeai`)."
+    )
+
 
 class AIService:
     def __init__(self, api_key: str, model_name: str):
@@ -25,16 +74,23 @@ class AIService:
         self._init_client()
 
     def _init_client(self):
-        if genai is None:
+        if genai is None and legacy_genai is None:
             raise RuntimeError(
-                "google-genai SDK is not available. Install/update it with "
+                "Gemini SDK is not available. Install/update it with "
                 "`pip install -U google-genai` and remove conflicting `google` package "
                 "if present."
-            ) from GENAI_IMPORT_ERROR
+            ) from (GENAI_IMPORT_ERROR or LEGACY_GENAI_IMPORT_ERROR)
 
         try:
-            self.client = genai.Client(api_key=self.api_key)
-            logging.info("GenAI Client initialized.")
+            if genai is not None:
+                self.client = genai.Client(api_key=self.api_key)
+                self._client_kind = "modern"
+                logging.info("GenAI Client initialized (google-genai).")
+            else:
+                legacy_genai.configure(api_key=self.api_key)
+                self.client = legacy_genai
+                self._client_kind = "legacy"
+                logging.info("GenAI Client initialized (google-generativeai).")
         except Exception as e:
             logging.error(f"Failed to initialize GenAI client: {e}")
             raise
@@ -45,17 +101,27 @@ class AIService:
             raise RuntimeError("Client not initialized")
 
         try:
-            config = types.GenerateContentConfig(
-                temperature=0.7,
+            if self._client_kind == "modern":
+                config = types.GenerateContentConfig(
+                    temperature=0.7,
+                    system_instruction=system_instruction,
+                    response_mime_type=response_mime_type,
+                )
+                return self.client.chats.create(
+                    model=self.model_name,
+                    config=config,
+                    history=[],
+                )
+
+            model = self.client.GenerativeModel(
+                model_name=self.model_name,
                 system_instruction=system_instruction,
-                response_mime_type=response_mime_type,
+                generation_config={
+                    "temperature": 0.7,
+                    "response_mime_type": response_mime_type,
+                },
             )
-            chat = self.client.chats.create(
-                model=self.model_name,
-                config=config,
-                history=[],
-            )
-            return chat
+            return _LegacyChatAdapter(model.start_chat(history=[]))
         except Exception as e:
             logging.error(f"Failed to create chat: {e}")
             raise
