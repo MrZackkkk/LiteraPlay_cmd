@@ -1,5 +1,14 @@
 import config
-from google import genai
+
+try:
+    import google.genai as genai
+except ImportError as exc:
+    print(
+        "Error: google-genai SDK is not available. "
+        "Install/update it with `pip install -U google-genai` and remove "
+        "a conflicting `google` package if present."
+    )
+    raise SystemExit(1) from exc
 
 if not config.API_KEY:
     print("Error: GOOGLE_API_KEY not found in config.")
@@ -8,16 +17,11 @@ if not config.API_KEY:
 print("Checking models...")
 try:
     client = genai.Client(api_key=config.API_KEY)
-    
+
     print("\n--- AVAILABLE MODELS ---")
-    # We will list everything safely without complex filtering
     for model in client.models.list():
-        # Depending on the exact SDK version, 'name' or 'display_name' should exist
-        name = getattr(model, 'name', None)
-        
-        # If we found a name, print it
+        name = getattr(model, "name", None)
         if name:
-            # Clean up the name if it starts with "models/"
             clean_name = name.replace("models/", "")
             print(f"- {clean_name}")
 
