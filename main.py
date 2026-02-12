@@ -1,6 +1,5 @@
 import threading
 import queue
-import time
 import traceback
 import json
 import re
@@ -11,8 +10,102 @@ import config
 from ai_service import AIService
 from data import LIBRARY
 
+try:
+    import google.genai as genai
+except ImportError:
+    genai = None
+
 # --- APP SETUP ---
 config.setup_appearance()
+
+
+def validate_api_key(key: str):
+    """Validate key by calling models.list() with google-genai SDK."""
+    cleaned_key = (key or "").strip()
+    if not cleaned_key:
+        return False, "Моля, въведете API ключ."
+
+    if genai is None:
+        return False, "google-genai не е наличен. Проверете инсталацията."
+
+    try:
+        client = genai.Client(api_key=cleaned_key)
+        next(iter(client.models.list()), None)
+        return True, "Ключът е валиден."
+    except Exception as exc:
+        return False, f"Невалиден ключ или проблем с API: {exc}"
+
+
+class APIKeyWindow(ctk.CTk):
+    def __init__(self):
+        super().__init__()
+        self.saved = False
+
+        self.title("LiteraPlay Setup")
+        self.geometry("520x280")
+
+        container = ctk.CTkFrame(self)
+        container.pack(fill="both", expand=True, padx=20, pady=20)
+
+        label = ctk.CTkLabel(
+            container,
+            text="Welcome to LiteraPlay. Please enter your Google Gemini API Key.",
+            wraplength=460,
+            justify="left",
+            font=("Roboto", 16, "bold"),
+        )
+        label.pack(anchor="w", pady=(10, 18), padx=14)
+
+        self.key_entry = ctk.CTkEntry(
+            container,
+            placeholder_text="AIza...",
+            show="*",
+            width=460,
+        )
+        self.key_entry.pack(padx=14, fill="x")
+        self.key_entry.focus()
+
+        self.verify_btn = ctk.CTkButton(
+            container,
+            text="Verify & Save",
+            command=self.on_verify,
+        )
+        self.verify_btn.pack(pady=(16, 10), padx=14, anchor="e")
+
+        self.status_label = ctk.CTkLabel(container, text="", text_color="gray")
+        self.status_label.pack(anchor="w", padx=14)
+
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
+    def on_close(self):
+        self.saved = False
+        self.destroy()
+
+    def on_verify(self):
+        key = self.key_entry.get().strip()
+        self.verify_btn.configure(state="disabled", text="Checking...")
+        self.status_label.configure(text="Проверка на API ключ...")
+
+        threading.Thread(target=self._verify_worker, args=(key,), daemon=True).start()
+
+    def _verify_worker(self, key: str):
+        is_valid, message = validate_api_key(key)
+        self.after(0, lambda: self._handle_validation_result(is_valid, message, key))
+
+    def _handle_validation_result(self, is_valid: bool, message: str, key: str):
+        if is_valid:
+            try:
+                config.save_api_key(key)
+                self.saved = True
+                self.status_label.configure(text="Успешно запазено. Стартиране...", text_color="green")
+                self.after(150, self.destroy)
+            except Exception as exc:
+                self.status_label.configure(text=f"Грешка при запис в .env: {exc}", text_color="red")
+                self.verify_btn.configure(state="normal", text="Verify & Save")
+        else:
+            self.status_label.configure(text=message, text_color="red")
+            self.verify_btn.configure(state="normal", text="Verify & Save")
+
 
 class ChatApp(ctk.CTk):
     def __init__(self):
@@ -20,7 +113,7 @@ class ChatApp(ctk.CTk):
 
         self.title(config.TITLE)
         self.geometry(config.WINDOW_SIZE)
-        
+
         # AI Service Init
         self.ai_service = None
         self.api_configured = False
@@ -60,11 +153,11 @@ class ChatApp(ctk.CTk):
 
             lbl_title = ctk.CTkLabel(card, text=f"{data['title']}", font=("Arial", 18, "bold"))
             lbl_title.pack(pady=(10, 0))
-            
+
             lbl_char = ctk.CTkLabel(card, text=f"Герой: {data['character']}", text_color="gray")
             lbl_char.pack(pady=(0, 10))
 
-            btn = ctk.CTkButton(card, text="Започни разговор", 
+            btn = ctk.CTkButton(card, text="Започни разговор",
                                 fg_color=data['color'], hover_color="#333",
                                 command=lambda k=key: self.start_chat(k))
             btn.pack(pady=(0, 15))
@@ -72,7 +165,7 @@ class ChatApp(ctk.CTk):
     # ================== SCREEN: CHAT ==================
     def start_chat(self, work_key):
         self.current_work = LIBRARY[work_key]
-        
+
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
@@ -95,12 +188,12 @@ class ChatApp(ctk.CTk):
         header_frame = ctk.CTkFrame(self.main_container, height=50, fg_color="#222")
         header_frame.pack(fill="x", side="top")
 
-        btn_back = ctk.CTkButton(header_frame, text="⬅ Меню", width=60, 
-                                 fg_color="transparent", border_width=1, 
+        btn_back = ctk.CTkButton(header_frame, text="⬅ Меню", width=60,
+                                 fg_color="transparent", border_width=1,
                                  command=self.show_menu)
         btn_back.pack(side="left", padx=10, pady=10)
 
-        lbl_header = ctk.CTkLabel(header_frame, text=f"{self.current_work['character']}", 
+        lbl_header = ctk.CTkLabel(header_frame, text=f"{self.current_work['character']}",
                                   font=("Roboto", 16, "bold"))
         lbl_header.pack(side="left", padx=10)
 
@@ -118,9 +211,9 @@ class ChatApp(ctk.CTk):
         # Options Area (Bottom, above Input)
         self.options_frame = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.options_frame.pack(side="bottom", fill="x", padx=15, pady=5)
-        
+
         for text in self.current_work['choices']:
-            btn = ctk.CTkButton(self.options_frame, text=text, 
+            btn = ctk.CTkButton(self.options_frame, text=text,
                                 fg_color=self.current_work['color'], height=30,
                                 command=lambda t=text: self.send_message(t))
             btn.pack(pady=2, fill="x")
@@ -158,7 +251,7 @@ class ChatApp(ctk.CTk):
             bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=20,
                                   wraplength=450, padx=20, pady=12, font=("Arial", 14))
             bubble.pack(anchor=align, padx=10)
-        
+
         self.main_container.after(10, lambda: self._scroll_down())
 
     def set_loading_state(self, is_loading):
@@ -182,12 +275,16 @@ class ChatApp(ctk.CTk):
                 self.loading_label = None
 
     def _scroll_down(self):
-        try: self.chat_frame._parent_canvas.yview_moveto(1.0)
-        except: pass
+        try:
+            self.chat_frame._parent_canvas.yview_moveto(1.0)
+        except Exception:
+            pass
 
     def send_message(self, text=None):
-        if text is None: text = self.entry.get()
-        if not text.strip(): return
+        if text is None:
+            text = self.entry.get()
+        if not text.strip():
+            return
 
         self.add_message("Ти", text, is_user=True)
         self.entry.delete(0, 'end')
@@ -196,7 +293,8 @@ class ChatApp(ctk.CTk):
     def request_worker(self):
         while True:
             text = self.request_queue.get()
-            if text: self.get_ai_response(text)
+            if text:
+                self.get_ai_response(text)
 
     def get_ai_response(self, user_text):
         if not self.chat or not self.ai_service:
@@ -237,7 +335,7 @@ class ChatApp(ctk.CTk):
                     if json_match:
                         try:
                             data = json.loads(json_match.group(0))
-                        except:
+                        except Exception:
                             data = None
 
             if data and isinstance(data, dict):
@@ -274,6 +372,13 @@ class ChatApp(ctk.CTk):
                                 command=lambda t=text: self.send_message(t))
             btn.pack(pady=2, fill="x")
 
+
 if __name__ == "__main__":
+    if not (config.API_KEY or "").strip():
+        setup_window = APIKeyWindow()
+        setup_window.mainloop()
+        if not setup_window.saved:
+            raise SystemExit(0)
+
     app = ChatApp()
     app.mainloop()
