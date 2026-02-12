@@ -1,5 +1,5 @@
 import os
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 import customtkinter as ctk
 
 # Load environment variables
@@ -18,5 +18,18 @@ TITLE = "LiteraPlay - Интерактивна Литература"
 COLOR_USER_BUBBLE = "#1F6AA5"
 COLOR_AI_BUBBLE = "#333333"
 
+
 def setup_appearance():
     ctk.set_appearance_mode(APPEARANCE_MODE)
+
+
+def save_api_key(key: str, dotenv_path: str = ".env"):
+    """Persist API key in .env and update runtime config."""
+    cleaned_key = (key or "").strip()
+    if not cleaned_key:
+        raise ValueError("API key cannot be empty")
+
+    set_key(dotenv_path, "GOOGLE_API_KEY", cleaned_key)
+
+    global API_KEY
+    API_KEY = cleaned_key
