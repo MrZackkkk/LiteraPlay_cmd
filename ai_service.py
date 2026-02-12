@@ -1,8 +1,18 @@
-import time
 import logging
-from typing import Optional, Callable
-from google import genai
-from google.genai import types
+import time
+from typing import Callable, Optional
+
+try:
+    # Preferred import style for current google-genai SDK.
+    import google.genai as genai
+    from google.genai import types
+except ImportError as exc:  # pragma: no cover - triggered only in broken environments
+    genai = None
+    types = None
+    GENAI_IMPORT_ERROR = exc
+else:
+    GENAI_IMPORT_ERROR = None
+
 
 class AIService:
     def __init__(self, api_key: str, model_name: str):
@@ -15,6 +25,13 @@ class AIService:
         self._init_client()
 
     def _init_client(self):
+        if genai is None:
+            raise RuntimeError(
+                "google-genai SDK is not available. Install/update it with "
+                "`pip install -U google-genai` and remove conflicting `google` package "
+                "if present."
+            ) from GENAI_IMPORT_ERROR
+
         try:
             self.client = genai.Client(api_key=self.api_key)
             logging.info("GenAI Client initialized.")
@@ -31,12 +48,12 @@ class AIService:
             config = types.GenerateContentConfig(
                 temperature=0.7,
                 system_instruction=system_instruction,
-                response_mime_type=response_mime_type
+                response_mime_type=response_mime_type,
             )
             chat = self.client.chats.create(
                 model=self.model_name,
                 config=config,
-                history=[]
+                history=[],
             )
             return chat
         except Exception as e:
