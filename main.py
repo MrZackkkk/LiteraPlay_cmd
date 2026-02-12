@@ -20,13 +20,13 @@ config.setup_appearance()
 
 
 def validate_api_key(key: str):
-    """Validate key by calling models.list() with google-genai SDK."""
+    """Validate key when possible; allow saving when local SDK validation is unavailable."""
     cleaned_key = (key or "").strip()
     if not cleaned_key:
         return False, "Моля, въведете API ключ."
 
     if genai is None:
-        return False, "google-genai не е наличен. Проверете инсталацията."
+        return True, "Локална проверка не е налична (google-genai липсва). Може да запазите ключа."
 
     try:
         client = genai.Client(api_key=cleaned_key)
@@ -139,10 +139,6 @@ class ChatApp(ctk.CTk):
 
         if not self.api_configured:
             print("API not configured: missing or invalid GOOGLE_API_KEY")
-            try:
-                messagebox.showwarning("AI Key", "Няма връзка с AI. Проверете GOOGLE_API_KEY в .env.")
-            except Exception:
-                pass
 
         # Main Container
         self.main_container = ctk.CTkFrame(self)
