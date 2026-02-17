@@ -43,7 +43,7 @@ class APIKeyWindow(ctk.CTk):
 
         self.key_entry = ctk.CTkEntry(
             container,
-            placeholder_text="AIza...",
+            placeholder_text="API...",
             show="*",
             width=460,
         )
