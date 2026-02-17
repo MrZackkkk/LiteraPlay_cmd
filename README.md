@@ -70,6 +70,14 @@ python check_models.py
 
 ```
 
+## Troubleshooting
+
+### ModuleNotFoundError: No module named 'customtkinter'
+If you encounter this error, it means the required dependencies are not installed. Please run:
+```bash
+pip install -r requirements.txt
+```
+
 ## Project Structure
 
 * `main.py`: The entry point of the application. Handles the GUI setup, application loop, threading for AI requests, and API communication.
