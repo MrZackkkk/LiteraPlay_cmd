@@ -1,8 +1,6 @@
 import threading
 import queue
 import traceback
-import json
-import re
 from tkinter import messagebox
 from dependency_compat import load_customtkinter
 
@@ -11,6 +9,7 @@ ctk = load_customtkinter()
 import config
 from ai_service import AIService, validate_api_key_with_available_sdk
 from data import LIBRARY
+from response_parser import parse_ai_json_response
 
 # --- APP SETUP ---
 config.setup_appearance()
@@ -305,30 +304,7 @@ class ChatApp(ctk.CTk):
             self.main_container.after(0, lambda: self.set_loading_state(False))
 
             # Parse JSON
-            data = None
-            try:
-                # 1. Try to parse directly (best case)
-                data = json.loads(response_text)
-            except json.JSONDecodeError:
-                # 2. Try to clean markdown
-                cleaned_text = response_text.strip()
-                if cleaned_text.startswith("```json"):
-                    cleaned_text = cleaned_text[7:]
-                elif cleaned_text.startswith("```"):
-                    cleaned_text = cleaned_text[3:]
-                if cleaned_text.endswith("```"):
-                    cleaned_text = cleaned_text[:-3]
-
-                try:
-                    data = json.loads(cleaned_text.strip())
-                except json.JSONDecodeError:
-                    # 3. Fallback: Search for JSON object using regex
-                    json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-                    if json_match:
-                        try:
-                            data = json.loads(json_match.group(0))
-                        except Exception:
-                            data = None
+            data = parse_ai_json_response(response_text)
 
             if data and isinstance(data, dict):
                 reply = data.get("reply", response_text)

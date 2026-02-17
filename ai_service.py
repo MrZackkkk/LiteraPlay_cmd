@@ -71,6 +71,7 @@ class AIService:
         self.api_key = api_key
         self.model_name = model_name
         self.client = None
+        self._client_kind = ""
         self._init_client()
 
     def _init_client(self):
@@ -140,7 +141,7 @@ class AIService:
         for attempt in range(max_retries):
             try:
                 response = chat_session.send_message(text)
-                return response.text
+                return getattr(response, "text", "") or ""
             except Exception as e:
                 err_msg = str(e)
                 # Check for 429 (Resource Exhausted)
@@ -154,6 +155,6 @@ class AIService:
                     retry_delay *= 2
                 else:
                     logging.error(f"API Error: {e}")
-                    raise e
+                    raise
 
         raise RuntimeError("Max retries reached")
