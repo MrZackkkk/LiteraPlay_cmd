@@ -107,7 +107,25 @@ class ChatApp(ctk.CTk):
         super().__init__()
 
         self.title(config.TITLE)
-        self.geometry(config.WINDOW_SIZE)
+        self.geometry("980x820")
+        self.minsize(860, 700)
+
+        self.palette = {
+            "bg": "#0B1020",
+            "surface": "#11182C",
+            "surface_soft": "#161F36",
+            "surface_chat": "#0D1325",
+            "border": "#2A3554",
+            "border_active": "#4E6BFF",
+            "text_primary": "#F5F7FF",
+            "text_secondary": "#9BA6C4",
+            "accent": "#4E6BFF",
+            "accent_hover": "#6F86FF",
+            "success": "#2CC7A0",
+            "user_bubble": "#385CFF",
+            "ai_bubble": "#1A233A",
+            "chip": "#253251",
+        }
 
         # AI Service Init
         self.ai_service = None
@@ -125,7 +143,7 @@ class ChatApp(ctk.CTk):
             print("API not configured: missing or invalid GOOGLE_API_KEY")
 
         # Main Container
-        self.main_container = ctk.CTkFrame(self)
+        self.main_container = ctk.CTkFrame(self, fg_color=self.palette["bg"])
         self.main_container.pack(fill="both", expand=True)
 
         self.show_menu()
@@ -135,23 +153,93 @@ class ChatApp(ctk.CTk):
         for widget in self.main_container.winfo_children():
             widget.destroy()
 
-        title = ctk.CTkLabel(self.main_container, text="Избери произведение", font=("Roboto", 28, "bold"))
-        title.pack(pady=(40, 20))
+        hero = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        hero.pack(fill="x", padx=30, pady=(36, 20))
+
+        badge = ctk.CTkLabel(
+            hero,
+            text="✦ LITERAPLAY SELECT",
+            fg_color=self.palette["surface"],
+            text_color=self.palette["accent_hover"],
+            corner_radius=20,
+            padx=16,
+            pady=8,
+            font=("Roboto", 12, "bold"),
+        )
+        badge.pack(anchor="w")
+
+        title = ctk.CTkLabel(
+            hero,
+            text="Избери произведение",
+            text_color=self.palette["text_primary"],
+            font=("Roboto", 42, "bold"),
+        )
+        title.pack(anchor="w", pady=(18, 4))
+
+        subtitle = ctk.CTkLabel(
+            hero,
+            text="Потопи се в диалог с легендарни герои – динамично, стилно и живо.",
+            text_color=self.palette["text_secondary"],
+            font=("Roboto", 16),
+        )
+        subtitle.pack(anchor="w")
+
+        cards_container = ctk.CTkFrame(self.main_container, fg_color="transparent")
+        cards_container.pack(fill="both", expand=True, padx=24, pady=8)
 
         for key, data in LIBRARY.items():
-            card = ctk.CTkFrame(self.main_container, fg_color="transparent", border_width=2, border_color="#444")
-            card.pack(pady=10, padx=20, fill="x")
+            card = ctk.CTkFrame(
+                cards_container,
+                fg_color=self.palette["surface"],
+                border_width=1,
+                border_color=self.palette["border"],
+                corner_radius=18,
+            )
+            card.pack(pady=12, padx=8, fill="x")
 
-            lbl_title = ctk.CTkLabel(card, text=f"{data['title']}", font=("Arial", 18, "bold"))
-            lbl_title.pack(pady=(10, 0))
+            lbl_title = ctk.CTkLabel(
+                card,
+                text=f"{data['title']}",
+                text_color=self.palette["text_primary"],
+                font=("Roboto", 30, "bold"),
+            )
+            lbl_title.pack(pady=(16, 2))
 
-            lbl_char = ctk.CTkLabel(card, text=f"Герой: {data['character']}", text_color="gray")
-            lbl_char.pack(pady=(0, 10))
+            lbl_char = ctk.CTkLabel(
+                card,
+                text=f"Герой: {data['character']}",
+                text_color=self.palette["text_secondary"],
+                font=("Roboto", 18),
+            )
+            lbl_char.pack(pady=(0, 14))
 
-            btn = ctk.CTkButton(card, text="Започни разговор",
-                                fg_color=data['color'], hover_color="#333",
-                                command=lambda k=key: self.start_chat(k))
-            btn.pack(pady=(0, 15))
+            btn = ctk.CTkButton(
+                card,
+                text="Започни разговор",
+                fg_color=data['color'],
+                hover_color=self.palette["accent_hover"],
+                font=("Roboto", 16, "bold"),
+                corner_radius=14,
+                height=44,
+                width=220,
+                command=lambda k=key: self.start_chat(k),
+            )
+            btn.pack(pady=(0, 20))
+
+            card.bind(
+                "<Enter>",
+                lambda _e, c=card, b=btn: (
+                    c.configure(border_color=self.palette["border_active"]),
+                    b.configure(width=235),
+                ),
+            )
+            card.bind(
+                "<Leave>",
+                lambda _e, c=card, b=btn: (
+                    c.configure(border_color=self.palette["border"]),
+                    b.configure(width=220),
+                ),
+            )
 
     # ================== SCREEN: CHAT ==================
     def start_chat(self, work_key):
@@ -176,26 +264,73 @@ class ChatApp(ctk.CTk):
         threading.Thread(target=self.request_worker, daemon=True).start()
 
         # --- UI Components ---
-        header_frame = ctk.CTkFrame(self.main_container, height=50, fg_color="#222")
-        header_frame.pack(fill="x", side="top")
+        header_frame = ctk.CTkFrame(
+            self.main_container,
+            height=64,
+            fg_color=self.palette["surface"],
+            border_width=1,
+            border_color=self.palette["border"],
+            corner_radius=0,
+        )
+        header_frame.pack(fill="x", side="top", padx=18, pady=(16, 6))
 
         btn_back = ctk.CTkButton(header_frame, text="⬅ Меню", width=60,
                                  fg_color="transparent", border_width=1,
+                                 border_color=self.palette["border_active"],
+                                 hover_color=self.palette["surface_soft"],
                                  command=self.show_menu)
         btn_back.pack(side="left", padx=10, pady=10)
 
         lbl_header = ctk.CTkLabel(header_frame, text=f"{self.current_work['character']}",
-                                  font=("Roboto", 16, "bold"))
+                                  text_color=self.palette["text_primary"],
+                                  font=("Roboto", 24, "bold"))
         lbl_header.pack(side="left", padx=10)
 
+        status_chip = ctk.CTkLabel(
+            header_frame,
+            text="● На линия",
+            fg_color=self.palette["chip"],
+            text_color=self.palette["success"],
+            corner_radius=16,
+            padx=10,
+            pady=4,
+            font=("Roboto", 12, "bold"),
+        )
+        status_chip.pack(side="right", padx=12)
+
         # Input Area (Bottom)
-        input_frame = ctk.CTkFrame(self.main_container, fg_color="#222", corner_radius=20)
+        input_frame = ctk.CTkFrame(
+            self.main_container,
+            fg_color=self.palette["surface"],
+            corner_radius=20,
+            border_width=1,
+            border_color=self.palette["border"],
+        )
         input_frame.pack(side="bottom", fill="x", padx=15, pady=(5, 15))
 
-        self.btn_send = ctk.CTkButton(input_frame, text="➤", width=40, height=35, command=self.send_message)
+        self.btn_send = ctk.CTkButton(
+            input_frame,
+            text="➤",
+            width=42,
+            height=38,
+            fg_color=self.palette["accent"],
+            hover_color=self.palette["accent_hover"],
+            font=("Roboto", 16, "bold"),
+            corner_radius=10,
+            command=self.send_message,
+        )
         self.btn_send.pack(side="right", padx=(5, 10), pady=10)
 
-        self.entry = ctk.CTkEntry(input_frame, placeholder_text="Напиши нещо...", height=35, border_width=0, fg_color="#333")
+        self.entry = ctk.CTkEntry(
+            input_frame,
+            placeholder_text="Напиши нещо...",
+            height=40,
+            border_width=0,
+            fg_color=self.palette["surface_soft"],
+            text_color=self.palette["text_primary"],
+            placeholder_text_color=self.palette["text_secondary"],
+            font=("Roboto", 16),
+        )
         self.entry.pack(side="left", fill="x", expand=True, padx=(15, 5), pady=10)
         self.entry.bind("<Return>", lambda event: self.send_message())
 
@@ -204,13 +339,26 @@ class ChatApp(ctk.CTk):
         self.options_frame.pack(side="bottom", fill="x", padx=15, pady=5)
 
         for text in self.current_work['choices']:
-            btn = ctk.CTkButton(self.options_frame, text=text,
-                                fg_color=self.current_work['color'], height=30,
-                                command=lambda t=text: self.send_message(t))
+            btn = ctk.CTkButton(
+                self.options_frame,
+                text=text,
+                fg_color=self.current_work['color'],
+                hover_color=self.palette["accent_hover"],
+                height=36,
+                font=("Roboto", 15, "bold"),
+                corner_radius=12,
+                command=lambda t=text: self.send_message(t),
+            )
             btn.pack(pady=2, fill="x")
 
         # Chat Frame (Remaining space)
-        self.chat_frame = ctk.CTkScrollableFrame(self.main_container)
+        self.chat_frame = ctk.CTkScrollableFrame(
+            self.main_container,
+            fg_color=self.palette["surface_chat"],
+            corner_radius=18,
+            border_width=1,
+            border_color=self.palette["border"],
+        )
         self.chat_frame.pack(side="top", pady=5, padx=10, fill="both", expand=True)
 
         self.loading_label = None
@@ -225,22 +373,23 @@ class ChatApp(ctk.CTk):
             msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
             msg_frame.pack(fill="x", pady=5)
 
-            bubble = ctk.CTkLabel(msg_frame, text=text, text_color="gray",
-                                  wraplength=480, padx=15, pady=5, font=("Arial", 12, "italic"))
+            bubble = ctk.CTkLabel(msg_frame, text=text, text_color=self.palette["text_secondary"],
+                                  wraplength=720, padx=15, pady=5, font=("Roboto", 17, "italic"))
             bubble.pack(anchor="center")
 
         else:
             align = "e" if is_user else "w"
-            color = config.COLOR_USER_BUBBLE if is_user else config.COLOR_AI_BUBBLE
+            color = self.palette["user_bubble"] if is_user else self.palette["ai_bubble"]
 
             msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
             msg_frame.pack(fill="x", pady=5)
 
-            name_lbl = ctk.CTkLabel(msg_frame, text=sender, font=("Arial", 10), text_color="silver")
+            name_lbl = ctk.CTkLabel(msg_frame, text=sender, font=("Roboto", 12, "bold"), text_color=self.palette["text_secondary"])
             name_lbl.pack(anchor=align, padx=15)
 
             bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=20,
-                                  wraplength=450, padx=20, pady=12, font=("Arial", 14))
+                                  text_color=self.palette["text_primary"],
+                                  wraplength=690, padx=20, pady=12, font=("Roboto", 16))
             bubble.pack(anchor=align, padx=10)
 
         self.main_container.after(10, lambda: self._scroll_down())
@@ -253,7 +402,7 @@ class ChatApp(ctk.CTk):
             if not self.loading_label:
                 msg = f"{self.current_work['character']} пише..."
                 self.loading_label = ctk.CTkLabel(self.chat_frame, text=msg,
-                                                  font=("Arial", 12, "italic"), text_color="gray")
+                                                  font=("Roboto", 13, "italic"), text_color=self.palette["text_secondary"])
                 self.loading_label.pack(anchor="w", padx=20, pady=5)
                 self.main_container.after(10, lambda: self._scroll_down())
         else:
@@ -335,9 +484,16 @@ class ChatApp(ctk.CTk):
 
         # Create new buttons
         for text in options_list:
-            btn = ctk.CTkButton(self.options_frame, text=text,
-                                fg_color=self.current_work['color'], height=30,
-                                command=lambda t=text: self.send_message(t))
+            btn = ctk.CTkButton(
+                self.options_frame,
+                text=text,
+                fg_color=self.current_work['color'],
+                hover_color=self.palette["accent_hover"],
+                height=36,
+                font=("Roboto", 15, "bold"),
+                corner_radius=12,
+                command=lambda t=text: self.send_message(t),
+            )
             btn.pack(pady=2, fill="x")
 
 
