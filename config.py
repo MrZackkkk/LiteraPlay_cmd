@@ -12,7 +12,7 @@ API_KEY = os.getenv("GOOGLE_API_KEY")
 DEFAULT_MODEL = "gemini-2.0-flash"  # Updated to a stable model name, or keep what was there
 
 # UI Configuration
-WINDOW_SIZE = "600x800"
+WINDOW_SIZE = "720x880"
 APPEARANCE_MODE = "Dark"
 TITLE = "LiteraPlay - Интерактивна Литература"
 
