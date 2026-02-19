@@ -1,4 +1,5 @@
 import logging
+import os
 import time
 from typing import Callable, Optional
 
@@ -158,3 +159,42 @@ class AIService:
                     raise
 
         raise RuntimeError("Max retries reached")
+
+    def send_pdf_context(
+        self,
+        chat_session,
+        pdf_path: str,
+        label: str,
+        fallback_text: str = "",
+        status_callback: Optional[Callable[[str], None]] = None,
+    ) -> bool:
+        """Send PDF context once. Prefer real PDF upload for modern SDK; fallback to plain text context."""
+        if not chat_session:
+            raise ValueError("Chat session is not active")
+
+        if not pdf_path or not os.path.exists(pdf_path):
+            logging.warning("PDF path missing or not found: %s", pdf_path)
+            if fallback_text:
+                self.send_message(chat_session, fallback_text, status_callback=status_callback)
+                return True
+            return False
+
+        if self._client_kind == "modern" and types is not None:
+            try:
+                with open(pdf_path, "rb") as f:
+                    pdf_bytes = f.read()
+
+                instruction = (
+                    f"Това е PDF на '{label}'. Използвай го за литературен контекст в текущата роля "
+                    "и запази канона на произведението в следващите реплики."
+                )
+                chat_session.send_message([instruction, types.Part.from_bytes(data=pdf_bytes, mime_type="application/pdf")])
+                return True
+            except Exception as exc:
+                logging.warning("Failed to send PDF attachment, falling back to text context: %s", exc)
+
+        if fallback_text:
+            self.send_message(chat_session, fallback_text, status_callback=status_callback)
+            return True
+
+        return False

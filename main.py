@@ -263,6 +263,7 @@ class ChatApp(ctk.CTk):
         # Session Init
         self.chat = None
         self.request_queue = queue.Queue()
+        self._pdf_context_sent = False
 
         if self.api_configured and self.ai_service is not None:
             try:
@@ -437,6 +438,36 @@ class ChatApp(ctk.CTk):
         except Exception:
             pass
 
+    def _build_pdf_context_message(self):
+        context_text = self.current_work.get('pdf_context', '').strip()
+        if not context_text:
+            return ''
+
+        label = self.current_work.get('pdf_context_label', self.current_work.get('title', 'UNKNOWN'))
+        return (
+            f"КОНТЕКСТ ОТ РОМАНА ({label}):\n"
+            "ВНИМАНИЕ: Следва извлечен текст от книгата. Използвай го като фактологична опора "
+            "за събития, места, отношения и езиков регистър, без да цитираш механично дълги откъси.\n\n"
+            f"{context_text}"
+        )
+
+    def _ensure_pdf_context_sent(self):
+        if self._pdf_context_sent:
+            return
+
+        pdf_context_message = self._build_pdf_context_message()
+        pdf_path = self.current_work.get('pdf_path', '')
+        label = self.current_work.get('pdf_context_label', self.current_work.get('title', 'UNKNOWN'))
+
+        self.ai_service.send_pdf_context(
+            self.chat,
+            pdf_path=pdf_path,
+            label=label,
+            fallback_text=pdf_context_message,
+            status_callback=lambda msg: self.update_ui(msg),
+        )
+        self._pdf_context_sent = True
+
     def send_message(self, text=None):
         if text is None:
             text = self.entry.get()
@@ -461,6 +492,8 @@ class ChatApp(ctk.CTk):
         self.main_container.after(0, lambda: self.set_loading_state(True))
 
         try:
+            self._ensure_pdf_context_sent()
+
             # Using AIService to send message
             response_text = self.ai_service.send_message(
                 self.chat,

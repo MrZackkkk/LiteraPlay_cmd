@@ -1,3 +1,4 @@
+import tempfile
 import unittest
 from unittest.mock import MagicMock, patch
 
@@ -66,6 +67,38 @@ class TestAIService(unittest.TestCase):
 
         response = service.send_message(mock_chat_session, "Hello")
         self.assertEqual(response, "")
+
+    @patch.object(AIService, "_init_client", return_value=None)
+    def test_send_pdf_context_uses_fallback_text_when_file_missing(self, _mock_init):
+        service = AIService(self.api_key, self.model_name)
+        service._client_kind = "modern"
+        mock_chat_session = MagicMock()
+
+        sent = service.send_pdf_context(
+            mock_chat_session,
+            pdf_path="books/missing.pdf",
+            label="TEST",
+            fallback_text="fallback-context",
+        )
+
+        self.assertTrue(sent)
+        mock_chat_session.send_message.assert_called_once_with("fallback-context")
+
+    @patch.object(AIService, "_init_client", return_value=None)
+    def test_send_pdf_context_sends_pdf_for_modern_client(self, _mock_init):
+        service = AIService(self.api_key, self.model_name)
+        service._client_kind = "modern"
+        mock_chat_session = MagicMock()
+
+        with tempfile.NamedTemporaryFile(suffix=".pdf") as tmp:
+            tmp.write(b"%PDF-1.4 test")
+            tmp.flush()
+            with patch("ai_service.types.Part.from_bytes", return_value="pdf_part") as mock_part:
+                sent = service.send_pdf_context(mock_chat_session, tmp.name, "TEST")
+
+        self.assertTrue(sent)
+        mock_part.assert_called_once()
+        mock_chat_session.send_message.assert_called_once()
 
 
 if __name__ == "__main__":

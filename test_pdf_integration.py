@@ -16,16 +16,23 @@ def _assert_book_context(work_key: str, label: str):
         print(f"Failure: '{work_key}' key missing from LIBRARY.")
         sys.exit(1)
 
-    prompt = LIBRARY[work_key]["prompt"]
-    print(f"{label} prompt length: {len(prompt)}")
+    pdf_path = LIBRARY[work_key].get("pdf_path", "")
+    if not pdf_path:
+        print(f"Failure: pdf_path missing for {label}.")
+        sys.exit(1)
 
-    marker = f"КОНТЕКСТ ОТ РОМАНА ({label}):"
-    if marker in prompt:
-        print(f"Success: Context marker found for {label}.")
+    if not os.path.exists(pdf_path):
+        print(f"Failure: PDF file missing for {label} at {pdf_path}.")
+        sys.exit(1)
+
+    context = LIBRARY[work_key].get("pdf_context", "")
+    print(f"{label} context length: {len(context)}")
+
+    if context.strip():
+        print(f"Success: PDF context loaded for {label}.")
         return
 
-    print(f"Warning: Context marker missing for {label}.")
-    print("Likely cause: missing PDF dependencies (e.g. pypdf) or extraction failure in environment.")
+    print(f"Warning: PDF text extraction unavailable for {label}; file will be sent directly at first AI turn.")
 
 
 def test_book_contexts():

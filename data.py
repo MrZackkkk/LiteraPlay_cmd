@@ -165,8 +165,15 @@ LIBRARY = {
 import os
 
 
-def _append_pdf_context(library_key: str, label: str, pdf_filename: str, extractor):
+def _register_pdf_file(library_key: str, label: str, pdf_filename: str):
     pdf_path = os.path.join("books", pdf_filename)
+    LIBRARY[library_key]["pdf_path"] = pdf_path
+    LIBRARY[library_key]["pdf_context_label"] = label
+
+
+def _load_pdf_context(library_key: str, extractor):
+    pdf_path = LIBRARY[library_key].get("pdf_path", "")
+    label = LIBRARY[library_key].get("pdf_context_label", LIBRARY[library_key].get("title", "UNKNOWN"))
     if not os.path.exists(pdf_path):
         print(f"WARNING: {label} PDF not found at {pdf_path}")
         return
@@ -176,23 +183,22 @@ def _append_pdf_context(library_key: str, label: str, pdf_filename: str, extract
         print(f"WARNING: {label} PDF is empty or extraction failed.")
         return
 
-    LIBRARY[library_key]["prompt"] += (
-        f"\n\nКОНТЕКСТ ОТ РОМАНА ({label}):\n"
-        "ВНИМАНИЕ: Следва извлечен текст от книгата. Използвай го като фактологична опора "
-        "за събития, места, отношения и езиков регистър, без да цитираш механично дълги откъси.\n\n"
-        f"{extracted_text}"
-    )
+    LIBRARY[library_key]["pdf_context"] = extracted_text
     print(f"INFO: {label} context loaded ({len(extracted_text)} chars).")
 
+
+_register_pdf_file("nemili", "NEMILI-NEDRAGI", "Ivan_Vazov_-_Nemili-nedragi_-_3765.pdf")
+_register_pdf_file("pod_igoto", "POD IGOTO", "Ivan_Vazov_-_Pod_igoto_-_1773-b.pdf")
+_register_pdf_file("tyutyun", "TYUTYUN", "Dimityr_Dimov_-_Tjutjun_-_1960-b.pdf")
 
 try:
     from pdf_loader import extract_text_from_pdf
 
-    _append_pdf_context("nemili", "NEMILI-NEDRAGI", "Ivan_Vazov_-_Nemili-nedragi_-_3765.pdf", extract_text_from_pdf)
-    _append_pdf_context("pod_igoto", "POD IGOTO", "Ivan_Vazov_-_Pod_igoto_-_1773-b.pdf", extract_text_from_pdf)
-    _append_pdf_context("tyutyun", "TYUTYUN", "Dimityr_Dimov_-_Tjutjun_-_1960-b.pdf", extract_text_from_pdf)
+    _load_pdf_context("nemili", extract_text_from_pdf)
+    _load_pdf_context("pod_igoto", extract_text_from_pdf)
+    _load_pdf_context("tyutyun", extract_text_from_pdf)
 
 except ImportError:
-    print("WARNING: pdf_loader not found. Book contexts will not be loaded.")
+    print("WARNING: pdf_loader not found. Will send PDF files directly when chat starts.")
 except Exception as e:
     print(f"ERROR: Failed to load book contexts: {e}")
