@@ -22,6 +22,16 @@ else:
     LEGACY_GENAI_IMPORT_ERROR = None
 
 
+# Strict instruction to append to system prompts
+STRICT_SYSTEM_INSTRUCTION = """
+IMPORTANT STRICT GUIDELINES:
+- **FACTUAL ACCURACY**: You must adhere strictly to the canonical facts of the literary universe. Do not invent key plot points or characters unless consistent with the setting.
+- **CHARACTER CONSISTENCY**: Stay in character at all times. Use appropriate language and tone.
+- **DYNAMIC SITUATION**: The situation evolves based on the conversation history. React to previous events and choices.
+- **NO HALLUCINATIONS**: Do not reference modern technology or concepts unless relevant to the specific prompt.
+"""
+
+
 class _LegacyChatAdapter:
     """Adapter that exposes the same send_message().text shape used by the new SDK."""
 
@@ -101,11 +111,15 @@ class AIService:
         if not self.client:
             raise RuntimeError("Client not initialized")
 
+        enhanced_instruction = f"{system_instruction}\n\n{STRICT_SYSTEM_INSTRUCTION}"
+
         try:
             if self._client_kind == "modern":
                 config = types.GenerateContentConfig(
-                    temperature=0.7,
-                    system_instruction=system_instruction,
+                    temperature=0.2,
+                    top_p=0.95,
+                    top_k=40,
+                    system_instruction=enhanced_instruction,
                     response_mime_type=response_mime_type,
                 )
                 return self.client.chats.create(
@@ -116,9 +130,11 @@ class AIService:
 
             model = self.client.GenerativeModel(
                 model_name=self.model_name,
-                system_instruction=system_instruction,
+                system_instruction=enhanced_instruction,
                 generation_config={
-                    "temperature": 0.7,
+                    "temperature": 0.2,
+                    "top_p": 0.95,
+                    "top_k": 40,
                     "response_mime_type": response_mime_type,
                 },
             )

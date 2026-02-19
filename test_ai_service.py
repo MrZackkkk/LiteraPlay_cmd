@@ -15,17 +15,35 @@ class TestAIService(unittest.TestCase):
         self.assertIsNotNone(service.client)
         mock_client_cls.assert_called_with(api_key=self.api_key)
 
+    @patch("ai_service.types.GenerateContentConfig")
     @patch("ai_service.genai.Client")
-    def test_create_chat(self, mock_client_cls):
+    def test_create_chat(self, mock_client_cls, mock_config_cls):
         service = AIService(self.api_key, self.model_name)
         mock_client_instance = mock_client_cls.return_value
         mock_chats = mock_client_instance.chats
         mock_chat_session = MagicMock()
         mock_chats.create.return_value = mock_chat_session
 
+        mock_config_instance = mock_config_cls.return_value
+
         chat = service.create_chat("System Prompt")
         self.assertEqual(chat, mock_chat_session)
-        mock_chats.create.assert_called_once()
+
+        # Verify GenerateContentConfig was called with correct parameters
+        mock_config_cls.assert_called_once()
+        _, kwargs = mock_config_cls.call_args
+        self.assertEqual(kwargs['temperature'], 0.2)
+        self.assertEqual(kwargs['top_p'], 0.95)
+        self.assertEqual(kwargs['top_k'], 40)
+        self.assertIn("System Prompt", kwargs['system_instruction'])
+        self.assertIn("STRICT GUIDELINES", kwargs['system_instruction'])
+
+        # Verify chats.create was called with the config
+        mock_chats.create.assert_called_once_with(
+            model=self.model_name,
+            config=mock_config_instance,
+            history=[],
+        )
 
     @patch.object(AIService, "_init_client", return_value=None)
     def test_send_message_success(self, _mock_init):
