@@ -102,3 +102,28 @@ LIBRARY = {
         ]
     }
 }
+
+# --- PDF Integration ---
+import os
+try:
+    from pdf_loader import extract_text_from_pdf
+
+    # Path to Pod Igoto PDF
+    # Assuming the script is run from the root directory
+    _pod_igoto_pdf = os.path.join("books", "Ivan_Vazov_-_Pod_igoto_-_1773-b.pdf")
+
+    if os.path.exists(_pod_igoto_pdf):
+        _pod_igoto_text = extract_text_from_pdf(_pod_igoto_pdf)
+
+        if _pod_igoto_text:
+            LIBRARY["pod_igoto"]["prompt"] += f"\n\nКОНТЕКСТ ОТ РОМАНА (POD IGOTO):\nВНИМАНИЕ: Следва пълният текст на романа. Използвай го за справка относно събития, места и герои, за да бъдеш максимално автентичен.\n\n{_pod_igoto_text}"
+            print(f"INFO: Pod Igoto context loaded ({len(_pod_igoto_text)} chars).")
+        else:
+            print("WARNING: Pod Igoto PDF is empty or extraction failed.")
+    else:
+        print(f"WARNING: Pod Igoto PDF not found at {_pod_igoto_pdf}")
+
+except ImportError:
+    print("WARNING: pdf_loader not found. Pod Igoto context will not be loaded.")
+except Exception as e:
+    print(f"ERROR: Failed to load Pod Igoto context: {e}")

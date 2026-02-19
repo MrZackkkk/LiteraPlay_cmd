@@ -1,3 +1,4 @@
 customtkinter
 google-genai>=1.0.0
 python-dotenv
+pypdf
