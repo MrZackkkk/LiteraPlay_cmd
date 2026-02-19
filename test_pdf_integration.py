@@ -16,15 +16,14 @@ def _assert_book_context(work_key: str, label: str):
         print(f"Failure: '{work_key}' key missing from LIBRARY.")
         sys.exit(1)
 
-    prompt = LIBRARY[work_key]["prompt"]
-    print(f"{label} prompt length: {len(prompt)}")
+    context = LIBRARY[work_key].get("pdf_context", "")
+    print(f"{label} context length: {len(context)}")
 
-    marker = f"КОНТЕКСТ ОТ РОМАНА ({label}):"
-    if marker in prompt:
-        print(f"Success: Context marker found for {label}.")
+    if context.strip():
+        print(f"Success: PDF context loaded for {label}.")
         return
 
-    print(f"Warning: Context marker missing for {label}.")
+    print(f"Warning: PDF context missing for {label}.")
     print("Likely cause: missing PDF dependencies (e.g. pypdf) or extraction failure in environment.")
 
 
