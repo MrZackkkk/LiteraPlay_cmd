@@ -268,6 +268,7 @@ class ChatApp(ctk.CTk):
         if self.api_configured and self.ai_service is not None:
             try:
                 self.chat = self.ai_service.create_chat(self.current_work['prompt'])
+                self._ensure_pdf_context_sent()
                 print(f"Chat session started for: {self.current_work['character']}")
             except Exception as e:
                 print(f"Session error: {e}")
@@ -376,19 +377,42 @@ class ChatApp(ctk.CTk):
 
         self.loading_label = None
 
+        # Bind scroll events to the main chat frame
+        self._bind_mouse_scroll(self.chat_frame)
+
         self.add_message("System", self.current_work['intro'], is_user=False, msg_type="system")
 
         start_msg = self.current_work.get('first_message', 'Здравей!')
         self.add_message(self.current_work['character'], start_msg, is_user=False)
 
+    def _bind_mouse_scroll(self, widget):
+        def _scroll_handler(event):
+            try:
+                if event.num == 4:
+                    self.chat_frame._parent_canvas.yview_scroll(-1, "units")
+                elif event.num == 5:
+                    self.chat_frame._parent_canvas.yview_scroll(1, "units")
+                elif event.delta:
+                    self.chat_frame._parent_canvas.yview_scroll(int(-1*(event.delta/120)), "units")
+            except Exception:
+                pass
+
+        # Bind to the widget and its children recursively if needed,
+        # but for new widgets we call it explicitly.
+        widget.bind("<Button-4>", _scroll_handler, add="+")
+        widget.bind("<Button-5>", _scroll_handler, add="+")
+        widget.bind("<MouseWheel>", _scroll_handler, add="+")
+
     def add_message(self, sender, text, is_user=True, msg_type="normal"):
         if msg_type == "system":
             msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
             msg_frame.pack(fill="x", pady=5)
+            self._bind_mouse_scroll(msg_frame)
 
             bubble = ctk.CTkLabel(msg_frame, text=text, text_color=self.palette["text_secondary"],
                                   wraplength=720, padx=15, pady=5, font=("Roboto", 17, "italic"))
             bubble.pack(anchor="center")
+            self._bind_mouse_scroll(bubble)
 
         else:
             align = "e" if is_user else "w"
@@ -396,14 +420,17 @@ class ChatApp(ctk.CTk):
 
             msg_frame = ctk.CTkFrame(self.chat_frame, fg_color="transparent")
             msg_frame.pack(fill="x", pady=5)
+            self._bind_mouse_scroll(msg_frame)
 
             name_lbl = ctk.CTkLabel(msg_frame, text=sender, font=("Roboto", 12, "bold"), text_color=self.palette["text_secondary"])
             name_lbl.pack(anchor=align, padx=15)
+            self._bind_mouse_scroll(name_lbl)
 
             bubble = ctk.CTkLabel(msg_frame, text=text, fg_color=color, corner_radius=20,
                                   text_color=self.palette["text_primary"],
                                   wraplength=690, padx=20, pady=12, font=("Roboto", 16))
             bubble.pack(anchor=align, padx=10)
+            self._bind_mouse_scroll(bubble)
 
         self.main_container.after(10, lambda: self._scroll_down())
 
@@ -503,9 +530,13 @@ class ChatApp(ctk.CTk):
             if data and isinstance(data, dict):
                 reply = data.get("reply", response_text)
                 options = data.get("options", [])
+                game_over = data.get("game_over", False)
 
                 self.update_ui(reply)
-                self.main_container.after(0, lambda: self.update_choices(options))
+                if game_over:
+                    self.main_container.after(0, lambda: self._handle_game_over())
+                else:
+                    self.main_container.after(0, lambda: self.update_choices(options))
             else:
                 # Fallback if no valid JSON structure found
                 self.update_ui(response_text)
@@ -518,6 +549,26 @@ class ChatApp(ctk.CTk):
 
     def update_ui(self, text):
         self.main_container.after(0, lambda: self.add_message(self.current_work['character'], text, is_user=False))
+
+    def _handle_game_over(self):
+        # Clear existing buttons
+        for widget in self.options_frame.winfo_children():
+            widget.destroy()
+
+        self.entry.configure(state="disabled")
+        self.btn_send.configure(state="disabled")
+
+        btn = ctk.CTkButton(
+            self.options_frame,
+            text="Край на сценария (Меню)",
+            fg_color="#FF4444",
+            hover_color="#CC3333",
+            height=36,
+            font=("Roboto", 15, "bold"),
+            corner_radius=12,
+            command=self.show_menu
+        )
+        btn.pack(pady=2, fill="x")
 
     def update_choices(self, options_list):
         # Clear existing buttons
