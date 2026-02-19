@@ -226,20 +226,32 @@ class ChatApp(ctk.CTk):
             )
             btn.pack(pady=(0, 20))
 
-            card.bind(
-                "<Enter>",
-                lambda _e, c=card, b=btn: (
-                    c.configure(border_color=self.palette["border_active"]),
-                    b.configure(width=235),
-                ),
-            )
-            card.bind(
-                "<Leave>",
-                lambda _e, c=card, b=btn: (
-                    c.configure(border_color=self.palette["border"]),
-                    b.configure(width=220),
-                ),
-            )
+            self._bind_card_hover(card, btn)
+
+    def _is_descendant(self, widget, ancestor):
+        current = widget
+        while current is not None:
+            if current == ancestor:
+                return True
+            current = current.master
+        return False
+
+    def _bind_card_hover(self, card, btn):
+        def activate(_event=None):
+            card.configure(border_color=self.palette["border_active"])
+            btn.configure(width=235)
+
+        def deactivate_if_outside(_event=None):
+            hovered = self.winfo_containing(self.winfo_pointerx(), self.winfo_pointery())
+            if hovered is not None and self._is_descendant(hovered, card):
+                return
+            card.configure(border_color=self.palette["border"])
+            btn.configure(width=220)
+
+        hover_widgets = [card] + list(card.winfo_children())
+        for widget in hover_widgets:
+            widget.bind("<Enter>", activate, add="+")
+            widget.bind("<Leave>", deactivate_if_outside, add="+")
 
     # ================== SCREEN: CHAT ==================
     def start_chat(self, work_key):
@@ -395,6 +407,11 @@ class ChatApp(ctk.CTk):
         self.main_container.after(10, lambda: self._scroll_down())
 
     def set_loading_state(self, is_loading):
+        option_state = "disabled" if is_loading else "normal"
+        for widget in self.options_frame.winfo_children():
+            if isinstance(widget, ctk.CTkButton):
+                widget.configure(state=option_state)
+
         if is_loading:
             self.entry.configure(state="disabled")
             self.btn_send.configure(state="disabled")
