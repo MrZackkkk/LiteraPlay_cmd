@@ -11,16 +11,6 @@ from pathlib import Path
 from typing import Callable
 
 
-def load_customtkinter():
-    """Return the customtkinter module or raise a helpful ImportError."""
-    try:
-        return import_module("customtkinter")
-    except ModuleNotFoundError as exc:
-        raise ImportError(
-            "customtkinter is required for the GUI. Install dependencies with "
-            "`pip install -r requirements.txt`."
-        ) from exc
-
 
 def load_dotenv_functions() -> tuple[Callable[[], bool], Callable[[str, str, str], tuple[bool, str, str]]]:
     """Return (load_dotenv, set_key).

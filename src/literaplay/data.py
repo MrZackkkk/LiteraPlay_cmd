@@ -35,7 +35,7 @@ LIBRARY = {
     "pod_igoto": {
         "title": "Под игото",
         "character": "Бай Марко",
-        "color": "#8B4513",  # SaddleBrown
+        "color": "#DC2626",  # Red 600
         "intro": "Нощта е бурна. Гръмотевици раздират небето над Бяла черкова. В дома на чорбаджи Марко цари тревога. Някакъв шум в обора кара стопанина да грабне пищова и да излезе в тъмнината...",
         "first_message": "Давранма!",
         "choices": [
@@ -80,7 +80,7 @@ Wait for the user's response.
     "nemili": {
         "title": "Немили-недраги",
         "character": "Македонски",
-        "color": "#A020F0",
+        "color": "#7C3AED",  # Violet 600
         "intro": "Кръчмата на Знаменосеца в Браила...",
         "first_message": "Да живей България!",
         "choices": [],
@@ -90,7 +90,7 @@ Wait for the user's response.
     "tyutyun": {
         "title": "Тютюн",
         "character": "Ирина",
-        "color": "#FFC0CB",
+        "color": "#DB2777",  # Pink 600
         "intro": "В салона на Никотиана...",
         "first_message": "Здравейте.",
         "choices": [],

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LiteraPlay</title>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <!-- Load QWebChannel API -->
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+</head>
+<body>
+
+    <!-- ================== SCREEN 1: API SETUP ================== -->
+    <div id="api-screen" class="screen flex-center">
+        <div class="glass-card api-card">
+            <h1>Welcome to LiteraPlay.</h1>
+            <p class="subtitle">Please enter your Google Gemini API Key to start.</p>
+            
+            <div class="input-group">
+                <input type="password" id="api-key-input" placeholder="AIza..." />
+            </div>
+            
+            <div class="action-row">
+                <p id="api-status"></p>
+                <button id="btn-verify" class="btn-primary">Verify & Save</button>
+            </div>
+        </div>
+        
+        <!-- Native Dialog Overlay for Qt MessageBox emulation -->
+        <div id="dialog-overlay" class="overlay hidden">
+            <div class="dialog">
+                <h2>Потвърждение</h2>
+                <p>API ключът е валиден. Искате ли да го запазите в .env файла?</p>
+                <div class="dialog-actions">
+                    <button id="btn-dialog-no" class="btn-secondary">Не записвай</button>
+                    <button id="btn-dialog-yes" class="btn-primary">Да, запази</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ================== SCREEN 2: MENU ================== -->
+    <div id="menu-screen" class="screen hidden layout-column">
+        <header class="menu-header">
+            <span class="badge">✦ LITERAPLAY SELECT</span>
+            <h1 class="main-title">Избери произведение</h1>
+            <p class="subtitle mt-2">Потопи се в диалог с легендарни герои – динамично, стилно и живо.</p>
+        </header>
+
+        <main class="cards-grid" id="library-cards-container">
+            <!-- Cards will be injected by JS -->
+        </main>
+    </div>
+
+
+    <!-- ================== SCREEN 3: CHAT ================== -->
+    <div id="chat-screen" class="screen hidden layout-column">
+        <header class="chat-header glass-header">
+            <button id="btn-back" class="btn-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <span>Меню</span>
+            </button>
+            <h2 id="chat-title" class="chat-title">Име на Героя</h2>
+            <div class="status-indicator">
+                <span class="dot"></span>
+                <span>На линия</span>
+            </div>
+        </header>
+
+        <main class="chat-history" id="chat-history">
+            <!-- Chat bubbles injected here -->
+        </main>
+
+        <div class="typing-indicator hidden" id="typing-indicator">
+            Мисли<span class="dots">...</span>
+        </div>
+
+        <footer class="chat-footer">
+            <div class="options-container" id="chat-options">
+                <!-- Buttons injected here -->
+            </div>
+            
+            <div class="input-area glass-input">
+                <input type="text" id="chat-input" placeholder="Напиши нещо..." autocomplete="off"/>
+                <button id="btn-send" class="btn-send">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

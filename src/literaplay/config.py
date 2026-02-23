@@ -1,8 +1,7 @@
 import os
-from literaplay.dependency_compat import load_customtkinter, load_dotenv_functions
+from literaplay.dependency_compat import load_dotenv_functions
 
 load_dotenv, set_key = load_dotenv_functions()
-ctk = load_customtkinter()
 
 # Load environment variables
 load_dotenv()
@@ -21,8 +20,6 @@ COLOR_USER_BUBBLE = "#1F6AA5"
 COLOR_AI_BUBBLE = "#333333"
 
 
-def setup_appearance():
-    ctk.set_appearance_mode(APPEARANCE_MODE)
 
 
 def save_api_key(key: str, dotenv_path: str = ".env"):

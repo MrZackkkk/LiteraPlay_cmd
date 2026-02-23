@@ -1,3 +1,11 @@
+import sys
+from pathlib import Path
+
+# Allow direct execution from IDEs
+_src_dir = Path(__file__).resolve().parent.parent
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
+
 from literaplay import config
 
 def main():
