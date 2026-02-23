@@ -1,10 +1,36 @@
-# Игнорирай секретните ключове
+# Environment Variables / Secrets
 .env
 
-# Игнорирай виртуалната среда (ако ползваш такава)
-game_env/
+# Virtual Environments
 venv/
+env/
+.venv/
+game_env/
 
-# Игнорирай кеширани файлове на Python
+# Python Cache & ByteCode
 __pycache__/
 *.pyc
+*.pyo
+*.pyd
+
+# Testing & Coverage
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+pytest_err.txt
+out*.txt
+error*.txt
+coverage*.txt
+cov*.txt
+
+# IDE / Edits
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Build & Dist
+build/
+dist/
+*.egg-info/

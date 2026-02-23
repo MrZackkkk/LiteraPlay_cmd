@@ -1,5 +1,5 @@
 import os
-from dependency_compat import load_customtkinter, load_dotenv_functions
+from literaplay.dependency_compat import load_customtkinter, load_dotenv_functions
 
 load_dotenv, set_key = load_dotenv_functions()
 ctk = load_customtkinter()

@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from ai_service import AIService
+from literaplay.ai_service import AIService
 
 
 class TestAIService(unittest.TestCase):
@@ -9,14 +9,14 @@ class TestAIService(unittest.TestCase):
         self.api_key = "fake_key"
         self.model_name = "fake_model"
 
-    @patch("ai_service.genai.Client")
+    @patch("literaplay.ai_service.genai.Client")
     def test_init(self, mock_client_cls):
         service = AIService(self.api_key, self.model_name)
         self.assertIsNotNone(service.client)
         mock_client_cls.assert_called_with(api_key=self.api_key)
 
-    @patch("ai_service.types.GenerateContentConfig")
-    @patch("ai_service.genai.Client")
+    @patch("literaplay.ai_service.types.GenerateContentConfig")
+    @patch("literaplay.ai_service.genai.Client")
     def test_create_chat(self, mock_client_cls, mock_config_cls):
         service = AIService(self.api_key, self.model_name)
         mock_client_instance = mock_client_cls.return_value

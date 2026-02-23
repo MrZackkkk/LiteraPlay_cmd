@@ -1,6 +1,6 @@
 import unittest
 
-from response_parser import parse_ai_json_response
+from literaplay.response_parser import parse_ai_json_response
 
 
 class TestResponseParser(unittest.TestCase):

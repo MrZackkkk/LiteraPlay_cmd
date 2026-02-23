@@ -2,17 +2,16 @@ import threading
 import queue
 import traceback
 from tkinter import messagebox
-from dependency_compat import load_customtkinter
+from literaplay.dependency_compat import load_customtkinter
 
 ctk = load_customtkinter()
 
-import config
-from ai_service import AIService, validate_api_key_with_available_sdk
-from data import LIBRARY
-from response_parser import parse_ai_json_response
+from literaplay import config
+from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
+from literaplay.data import LIBRARY
+from literaplay.response_parser import parse_ai_json_response
 
 # --- APP SETUP ---
-config.setup_appearance()
 
 
 def validate_api_key(key: str):

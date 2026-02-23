@@ -5,7 +5,7 @@ import sys
 sys.path.append(os.getcwd())
 
 try:
-    from data import LIBRARY
+    from literaplay.data import LIBRARY
 except Exception as e:
     print(f"Error importing data: {e}")
     sys.exit(1)

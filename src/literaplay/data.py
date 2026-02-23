@@ -76,5 +76,25 @@ You have just said: "Давранма!"
 Wait for the user's response.
 """,
         "pdf_context": pod_igoto_text
+    },
+    "nemili": {
+        "title": "Немили-недраги",
+        "character": "Македонски",
+        "color": "#A020F0",
+        "intro": "Кръчмата на Знаменосеца в Браила...",
+        "first_message": "Да живей България!",
+        "choices": [],
+        "prompt": f"{COMMON_RULES}\nYou are Makedonski.\n",
+        "pdf_context": ""
+    },
+    "tyutyun": {
+        "title": "Тютюн",
+        "character": "Ирина",
+        "color": "#FFC0CB",
+        "intro": "В салона на Никотиана...",
+        "first_message": "Здравейте.",
+        "choices": [],
+        "prompt": f"{COMMON_RULES}\nYou are Irina.\n",
+        "pdf_context": ""
     }
 }
