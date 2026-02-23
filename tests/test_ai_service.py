@@ -86,6 +86,35 @@ class TestAIService(unittest.TestCase):
         self.assertEqual(response, "")
 
 
+@patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
+@patch("literaplay.ai_service.genai.Client")
+def test_validate_api_key_uses_generate_content(mock_client_cls):
+    from literaplay.ai_service import validate_api_key_with_available_sdk
+
+    mock_client = mock_client_cls.return_value
+    ok, message = validate_api_key_with_available_sdk("valid-key")
+
+    assert ok is True
+    assert "валиден" in message
+    mock_client.models.generate_content.assert_called_once()
+
+
+@patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
+@patch("literaplay.ai_service.genai.Client")
+def test_validate_api_key_falls_back_to_list_models_on_generate_error(mock_client_cls):
+    from literaplay.ai_service import validate_api_key_with_available_sdk
+
+    mock_client = mock_client_cls.return_value
+    mock_client.models.generate_content.side_effect = Exception("generation blocked")
+    mock_client.models.list.return_value = iter([object()])
+
+    ok, message = validate_api_key_with_available_sdk("valid-key")
+
+    assert ok is True
+    assert "валиден" in message
+    mock_client.models.list.assert_called_once()
+
+
 if __name__ == "__main__":
     import logging
 
