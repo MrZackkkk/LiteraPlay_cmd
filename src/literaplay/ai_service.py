@@ -51,13 +51,29 @@ def validate_api_key_with_available_sdk(key: str) -> tuple[bool, str]:
     if not cleaned_key:
         return False, "Моля, въведете API ключ."
 
+    # Use the configured default model for a minimal real request.
+    # Listing models may fail in some environments even with an otherwise valid key,
+    # which can keep the UI blocked on the verification step.
+    from literaplay import config
+    model_name = config.DEFAULT_MODEL
+
     if genai is not None:
         try:
             client = genai.Client(api_key=cleaned_key)
-            next(iter(client.models.list()), None)
+            client.models.generate_content(
+                model=model_name,
+                contents="Ping",
+                config=types.GenerateContentConfig(max_output_tokens=1),
+            )
             return True, "Ключът е валиден."
         except Exception as exc:
-            return False, f"Невалиден ключ или проблем с API: {exc}"
+            try:
+                # Fallback: if lightweight generation is blocked, try model listing.
+                # Some environments allow listing while content generation is restricted.
+                next(iter(client.models.list()), None)
+                return True, "Ключът е валиден."
+            except Exception:
+                return False, f"Невалиден ключ или проблем с API: {exc}"
 
     if legacy_genai is not None:
         try:
