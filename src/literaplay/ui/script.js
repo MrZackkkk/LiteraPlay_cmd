@@ -2,6 +2,12 @@ let backend = null;
 let currentCharacterName = "";
 let currentColor = "#3B82F6";
 
+function escapeHTML(str) {
+    const div = document.createElement("div");
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
 // Initialize QWebChannel
 document.addEventListener("DOMContentLoaded", () => {
     new QWebChannel(qt.webChannelTransport, (channel) => {
@@ -25,14 +31,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setupEventListeners() {
     // API Screen
-    document.getElementById("btn-verify").addEventListener("click", () => {
-        const key = document.getElementById("api-key-input").value.trim();
-        if (!key) return;
-
-        document.getElementById("btn-verify").disabled = true;
-        document.getElementById("btn-verify").innerText = "Checking...";
-        document.getElementById("api-status").innerText = "Проверка на API ключ...";
-        backend.verify_api_key(key);
+    document.getElementById("btn-verify").addEventListener("click", submitApiKey);
+    document.getElementById("api-key-input").addEventListener("keypress", (e) => {
+        if (e.key === "Enter") submitApiKey();
     });
 
     document.getElementById("btn-dialog-no").addEventListener("click", () => {
@@ -56,6 +57,17 @@ function setupEventListeners() {
     document.getElementById("chat-input").addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendInputMsg();
     });
+}
+
+function submitApiKey() {
+    const key = document.getElementById("api-key-input").value.trim();
+    if (!key) return;
+
+    document.getElementById("btn-verify").disabled = true;
+    document.getElementById("btn-verify").innerText = "Checking...";
+    document.getElementById("api-status").style.color = "var(--text-secondary)";
+    document.getElementById("api-status").innerText = "Проверка на API ключ...";
+    backend.verify_api_key(key);
 }
 
 function showScreen(name) {
@@ -95,9 +107,9 @@ function renderLibrary(libraryJson) {
         const safeColor = data.color || "var(--accent)";
 
         card.innerHTML = `
-            <h2>${data.title}</h2>
-            <p class="char-info" style="color: ${safeColor}">Герой: ${data.character}</p>
-            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${key}', '${data.character}', '${safeColor}')">Започни разговор</button>
+            <h2>${escapeHTML(data.title)}</h2>
+            <p class="char-info" style="color: ${safeColor}">Герой: ${escapeHTML(data.character)}</p>
+            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${escapeHTML(key)}', '${escapeHTML(data.character)}', '${safeColor}')">Започни разговор</button>
         `;
         container.appendChild(card);
     }
@@ -128,11 +140,12 @@ function renderChatMessage(sender, text, isUser, isSystem) {
 
     let html = "";
     if (!isSystem) {
-        html += `<span class="sender-name">${sender}</span>`;
+        html += `<span class="sender-name">${escapeHTML(sender)}</span>`;
     }
 
-    // Convert newlines to breaks
-    const formattedText = text.replace(/\\n/g, '<br>');
+    // Sanitize and convert newlines to breaks
+    const safeText = escapeHTML(text);
+    const formattedText = safeText.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
     html += `<div class="bubble">${formattedText}</div>`;
 
     wrapper.innerHTML = html;

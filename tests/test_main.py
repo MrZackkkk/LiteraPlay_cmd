@@ -1,14 +1,29 @@
 import unittest
 from unittest.mock import patch, MagicMock
-from literaplay.main import validate_api_key
 
-class TestMainLogic(unittest.TestCase):
-    @patch("literaplay.main.validate_api_key_with_available_sdk")
-    def test_validate_api_key_delegates(self, mock_validate):
-        mock_validate.return_value = (True, "OK")
-        res = validate_api_key("test_key")
-        self.assertEqual(res, (True, "OK"))
-        mock_validate.assert_called_once_with("test_key")
+
+class TestBackendBridge(unittest.TestCase):
+    """Verify that BackendBridge dispatches API key verification to a worker."""
+
+    @patch("literaplay.main.AIService")
+    @patch("literaplay.main.config")
+    def test_verify_api_key_starts_worker(self, mock_config, mock_ai_cls):
+        mock_config.API_KEY = None
+        mock_config.DEFAULT_MODEL = "test-model"
+
+        from literaplay.main import BackendBridge
+
+        bridge = BackendBridge(app_window=MagicMock())
+
+        with patch("literaplay.main.APIVerifyWorker") as mock_worker_cls:
+            mock_worker = MagicMock()
+            mock_worker_cls.return_value = mock_worker
+
+            bridge.verify_api_key("test-key")
+
+            mock_worker_cls.assert_called_once_with("test-key")
+            mock_worker.start.assert_called_once()
+
 
 if __name__ == "__main__":
     unittest.main()

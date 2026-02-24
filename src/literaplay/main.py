@@ -43,8 +43,8 @@ class AIChatWorker(QThread):
                 if context_text:
                     label = self.current_work.get('pdf_context_label', self.current_work.get('title', 'UNKNOWN'))
                     pdf_msg = (
-                        f"КОНТЕКСТ ОТ РОМАНА ({label}):\\n"
-                        "ВНИМАНИЕ: Използвай го като фактологична опора.\\n\\n"
+                        f"КОНТЕКСТ ОТ РОМАНА ({label}):\n"
+                        "ВНИМАНИЕ: Използвай го като фактологична опора.\n\n"
                         f"{context_text}"
                     )
                     self.ai_service.send_message(self.chat_session, pdf_msg)
