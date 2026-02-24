@@ -8,7 +8,7 @@ load_dotenv()
 
 # API Configuration
 API_KEY = os.getenv("GOOGLE_API_KEY")
-DEFAULT_MODEL = "gemini-2.5-flash"  # Updated to a stable model name, or keep what was there
+DEFAULT_MODEL = "gemini-2.5-flash"
 
 # UI Configuration
 WINDOW_SIZE = "600x800"
@@ -18,8 +18,6 @@ TITLE = "LiteraPlay - Интерактивна Литература"
 # Colors
 COLOR_USER_BUBBLE = "#1F6AA5"
 COLOR_AI_BUBBLE = "#333333"
-
-
 
 
 def save_api_key(key: str, dotenv_path: str = ".env"):

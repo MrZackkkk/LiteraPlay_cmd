@@ -91,9 +91,8 @@ class BackendBridge(QObject):
         if config.API_KEY:
             try:
                 self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
-                print("AIService Initialized.")
-            except Exception as e:
-                print(f"Error init AIService: {e}")
+            except Exception:
+                pass
 
     @Slot()
     def request_initial_state(self):
@@ -113,7 +112,6 @@ class BackendBridge(QObject):
 
     @Slot(bool, str)
     def _on_api_validation_worker_done(self, is_valid, message):
-        print(f"[DEBUG] API validation result: valid={is_valid}, msg={message}")
         self.apiValidationResult.emit(is_valid, message)
 
     @Slot(str, bool)
@@ -144,9 +142,7 @@ class BackendBridge(QObject):
 
     @Slot(str)
     def send_user_message(self, text):
-        print(f"[DEBUG] send_user_message called with: {text!r}")
         if not self.ai_service or not self.chat_session:
-            print("[DEBUG] No active ai_service or chat_session!")
             self.chatError.emit("Няма активна сесия.")
             return
 
@@ -161,14 +157,17 @@ class BackendBridge(QObject):
     def _on_chat_response_worker(self, data):
         reply = data.get('reply', '')
         options = data.get('options', [])
-        print(f"[DEBUG] Chat response received, reply length={len(reply)}")
         self.loadingStateChanged.emit(False)
-        self.chatMessageReceived.emit(self.current_work['character'], reply, False, False)
-        self.chatOptionsUpdated.emit(options)
+        self.chatMessageReceived.emit(json.dumps({
+            "sender": self.current_work['character'],
+            "text": reply,
+            "isUser": False,
+            "isSystem": False
+        }))
+        self.chatOptionsUpdated.emit(json.dumps(options))
 
     @Slot(str)
     def _on_chat_error_worker(self, message):
-        print(f"[DEBUG] Chat error: {message}")
         self.loadingStateChanged.emit(False)
         self.chatError.emit(message)
 

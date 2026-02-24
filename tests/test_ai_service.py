@@ -45,8 +45,8 @@ class TestAIService(unittest.TestCase):
             history=[],
         )
 
-    @patch.object(AIService, "_init_client", return_value=None)
-    def test_send_message_success(self, _mock_init):
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_success(self, mock_client_cls):
         service = AIService(self.api_key, self.model_name)
 
         mock_chat_session = MagicMock()
@@ -57,8 +57,8 @@ class TestAIService(unittest.TestCase):
         response = service.send_message(mock_chat_session, "Hello")
         self.assertEqual(response, "AI Response")
 
-    @patch.object(AIService, "_init_client", return_value=None)
-    def test_send_message_retry(self, _mock_init):
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_retry(self, mock_client_cls):
         service = AIService(self.api_key, self.model_name)
         mock_chat_session = MagicMock()
 
@@ -76,8 +76,8 @@ class TestAIService(unittest.TestCase):
         callback.assert_called_once()
         self.assertEqual(mock_chat_session.send_message.call_count, 2)
 
-    @patch.object(AIService, "_init_client", return_value=None)
-    def test_send_message_missing_text_returns_empty_string(self, _mock_init):
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_missing_text_returns_empty_string(self, mock_client_cls):
         service = AIService(self.api_key, self.model_name)
         mock_chat_session = MagicMock()
         mock_chat_session.send_message.return_value = object()

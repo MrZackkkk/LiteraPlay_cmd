@@ -13,8 +13,7 @@ Built with **PySide6 / Qt WebEngine** for a modern hybrid UI and backed by the *
 - **Hybrid Desktop UI** — A native PySide6 window hosts a polished HTML/CSS/JS frontend via Qt WebChannel, combining desktop reliability with web-grade aesthetics.
 - **Threaded AI Requests** — Chat and API-key verification run on background `QThread` workers, keeping the UI responsive.
 - **Dynamic Choice System** — Pre-defined dialogue options guide the conversation alongside a free-text input field.
-- **PDF / Text Context Injection** — Full novel text can be loaded (`.txt` or `.pdf`) and sent to the AI as factual context for grounded responses.
-- **Dual SDK Support** — Works with both the modern `google-genai` SDK and the legacy `google-generativeai` package, with automatic fallback.
+- **Text Context Injection** — Full novel text can be loaded (`.txt`) and sent to the AI as factual context for grounded responses.
 - **Automatic Rate-Limit Retry** — Handles HTTP 429 errors with exponential back-off (up to 5 retries).
 
 ---
@@ -67,7 +66,6 @@ Built with **PySide6 / Qt WebEngine** for a modern hybrid UI and backed by the *
 | `PySide6 >=6.6.0` | Qt 6 bindings — native window + WebEngine |
 | `google-genai >=1.0.0` | Google Gemini AI SDK |
 | `python-dotenv` | `.env` file loading (optional — fallback built-in) |
-| `pypdf` | PDF text extraction for context injection |
 
 ---
 
@@ -105,11 +103,6 @@ On launch you will see:
 2. **Library Menu** — pick a literary work to begin.
 3. **Chat Screen** — role-play with the character using suggested options or free text.
 
-### Checking Available Gemini Models
-
-```bash
-python -m literaplay.check_models
-```
 
 ---
 
@@ -127,20 +120,15 @@ LiteraPlay_cmd/
 │       ├── data.py                 # LIBRARY dict — scenarios, character prompts, novel text loading
 │       ├── response_parser.py      # JSON response parser — handles plain, fenced, and embedded JSON
 │       ├── dependency_compat.py    # Fallback implementations for python-dotenv
-│       ├── pdf_loader.py           # PDF text extraction via pypdf
-│       ├── check_models.py         # CLI utility to list available Gemini models
 │       └── ui/
 │           ├── index.html          # Frontend markup (API screen, menu, chat)
 │           ├── style.css           # Styles — dark theme, glassmorphism, animations
 │           └── script.js           # Frontend logic — QWebChannel signals, DOM rendering
 ├── tests/                          # Pytest test suites
 │   ├── test_ai_service.py
-│   ├── test_check_models.py
 │   ├── test_data.py
 │   ├── test_dependency_compat.py
-│   ├── test_main.py
-│   ├── test_pdf_integration.py
-│   ├── test_pdf_loader.py
+
 │   └── test_response_parser.py
 ├── requirements.txt
 ├── pyrightconfig.json
@@ -208,7 +196,6 @@ pip install -r requirements.txt
 ```
 
 ### API key errors / `429 Resource Exhausted`
-- Verify your key is valid with `python -m literaplay.check_models`.
 - The app automatically retries on 429 errors with exponential back-off, but sustained overload may require waiting or switching to a different model.
 - The default model is configured in `config.py` (`DEFAULT_MODEL`).
 
