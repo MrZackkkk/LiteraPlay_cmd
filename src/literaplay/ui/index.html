@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="bg">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,10 +10,11 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
-    
+
     <!-- Load QWebChannel API -->
     <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
 </head>
+
 <body>
 
     <!-- ================== SCREEN 1: API SETUP ================== -->
@@ -20,17 +22,17 @@
         <div class="glass-card api-card">
             <h1>Welcome to LiteraPlay.</h1>
             <p class="subtitle">Please enter your Google Gemini API Key to start.</p>
-            
+
             <div class="input-group">
-                <input type="password" id="api-key-input" placeholder="AIza..." />
+                <input type="password" id="api-key-input" placeholder="API Key..." />
             </div>
-            
+
             <div class="action-row">
                 <p id="api-status"></p>
                 <button id="btn-verify" class="btn-primary">Verify & Save</button>
             </div>
         </div>
-        
+
         <!-- Native Dialog Overlay for Qt MessageBox emulation -->
         <div id="dialog-overlay" class="overlay hidden">
             <div class="dialog">
@@ -63,7 +65,11 @@
     <div id="chat-screen" class="screen hidden layout-column">
         <header class="chat-header glass-header">
             <button id="btn-back" class="btn-icon">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"></line><polyline points="12 19 5 12 12 5"></polyline></svg>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
                 <span>Меню</span>
             </button>
             <h2 id="chat-title" class="chat-title">Име на Героя</h2>
@@ -85,11 +91,15 @@
             <div class="options-container" id="chat-options">
                 <!-- Buttons injected here -->
             </div>
-            
+
             <div class="input-area glass-input">
-                <input type="text" id="chat-input" placeholder="Напиши нещо..." autocomplete="off"/>
+                <input type="text" id="chat-input" placeholder="Напиши нещо..." autocomplete="off" />
                 <button id="btn-send" class="btn-send">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
                 </button>
             </div>
         </footer>
@@ -97,4 +107,5 @@
 
     <script src="script.js"></script>
 </body>
+
 </html>

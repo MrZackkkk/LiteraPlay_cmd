@@ -11,8 +11,7 @@ if str(_src_dir) not in sys.path:
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtCore import Qt, QUrl, QObject, Slot, Signal, QThread
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import QUrl, QObject, Slot, Signal, QThread
 
 from literaplay import config
 from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
@@ -27,31 +26,16 @@ class AIChatWorker(QThread):
     response_signal = Signal(dict)
     error_signal = Signal(str)
 
-    def __init__(self, ai_service, chat_session, user_text, pdf_context_sent, current_work):
+    def __init__(self, ai_service, chat_session, user_text):
         super().__init__()
         self.ai_service = ai_service
         self.chat_session = chat_session
         self.user_text = user_text
-        self.pdf_context_sent = pdf_context_sent
-        self.current_work = current_work
 
     def run(self):
         try:
-            # Send PDF Context once
-            if not self.pdf_context_sent:
-                context_text = self.current_work.get('pdf_context', '').strip()
-                if context_text:
-                    label = self.current_work.get('pdf_context_label', self.current_work.get('title', 'UNKNOWN'))
-                    pdf_msg = (
-                        f"КОНТЕКСТ ОТ РОМАНА ({label}):\\n"
-                        "ВНИМАНИЕ: Използвай го като фактологична опора.\\n\\n"
-                        f"{context_text}"
-                    )
-                    self.ai_service.send_message(self.chat_session, pdf_msg)
-
-            # Send actual user text
             response_text = self.ai_service.send_message(self.chat_session, self.user_text)
-            
+
             # Parse response
             data = parse_ai_json_response(response_text)
             if data and isinstance(data, dict):
@@ -88,8 +72,8 @@ class BackendBridge(QObject):
     # Signals to JS
     apiValidationResult = Signal(bool, str)
     libraryLoaded = Signal(str)
-    chatMessageReceived = Signal(str, str, bool, bool)  # sender, text, isUser, isSystem
-    chatOptionsUpdated = Signal(list)
+    chatMessageReceived = Signal(str)  # JSON string {sender, text, isUser, isSystem}
+    chatOptionsUpdated = Signal(str)  # JSON string — QWebChannel cannot serialize Python lists
     chatStarted = Signal(str, str) # intro, first_message
     chatError = Signal(str)
     loadingStateChanged = Signal(bool)
@@ -101,7 +85,6 @@ class BackendBridge(QObject):
         self.ai_service = None
         self.chat_session = None
         self.current_work = None
-        self.pdf_context_sent = False
         self.worker = None
         self.api_worker = None
         
@@ -151,47 +134,64 @@ class BackendBridge(QObject):
     def start_chat_session(self, work_key):
         self.current_work = LIBRARY[work_key]
         self.chat_session = None
-        self.pdf_context_sent = False
         
         if self.ai_service:
             try:
                 self.chat_session = self.ai_service.create_chat(self.current_work['prompt'])
                 self.chatStarted.emit(self.current_work['intro'], self.current_work.get('first_message', 'Здравей!'))
-                self.chatOptionsUpdated.emit(self.current_work.get('choices', []))
+                self.chatOptionsUpdated.emit(json.dumps(self.current_work.get('choices', [])))
             except Exception as e:
                 self.chatError.emit(str(e))
 
     @Slot(str)
     def send_user_message(self, text):
+        print(f"[DEBUG] send_user_message called with: {text!r}")
         if not self.ai_service or not self.chat_session:
+            print("[DEBUG] No active ai_service or chat_session!")
             self.chatError.emit("Няма активна сесия.")
             return
 
         self.loadingStateChanged.emit(True)
 
-        self.worker = AIChatWorker(self.ai_service, self.chat_session, text, self.pdf_context_sent, self.current_work)
+        self.worker = AIChatWorker(self.ai_service, self.chat_session, text)
         self.worker.response_signal.connect(self._on_chat_response_worker)
         self.worker.error_signal.connect(self._on_chat_error_worker)
         self.worker.start()
 
     def _on_chat_response_worker(self, data):
-        self.pdf_context_sent = True
         reply = data.get('reply', '')
         options = data.get('options', [])
+        print(f"[DEBUG] AI response received. Reply length: {len(reply)}, Options: {options}")
         
         from PySide6.QtCore import QTimer
         def trigger_ui():
+            print("[DEBUG] trigger_ui fired — pushing to JS via runJavaScript")
             self.loadingStateChanged.emit(False)
-            self.chatMessageReceived.emit(self.current_work['character'], reply, False, False)
-            self.chatOptionsUpdated.emit(options)
+
+            # WORKAROUND: QWebChannel signals don't reliably deliver to JS,
+            # so we call JS functions directly via runJavaScript instead.
+            page = self.app_window.browser.page()
+            msg_json = json.dumps({"sender": self.current_work['character'], "text": reply, "isUser": False, "isSystem": False}, ensure_ascii=False)
+            opts_json = json.dumps(options, ensure_ascii=False)
+            # Escape backticks/backslashes for JS template safety
+            safe_msg = msg_json.replace('\\', '\\\\').replace('`', '\\`')
+            safe_opts = opts_json.replace('\\', '\\\\').replace('`', '\\`')
+            js_code = f"handleChatMessageJson(`{safe_msg}`); renderChatOptions(`{safe_opts}`);"
+            page.runJavaScript(js_code)
+            print("[DEBUG] runJavaScript executed successfully")
             
         QTimer.singleShot(0, trigger_ui)
 
     def _on_chat_error_worker(self, message):
+        print(f"[DEBUG] AI error: {message}")
         from PySide6.QtCore import QTimer
         def trigger_error():
             self.loadingStateChanged.emit(False)
-            self.chatError.emit(message)
+            # WORKAROUND: Call JS directly instead of using QWebChannel signal
+            page = self.app_window.browser.page()
+            msg_json = json.dumps({"sender": "System", "text": "Грешка: " + message, "isUser": False, "isSystem": True}, ensure_ascii=False)
+            safe_msg = msg_json.replace('\\', '\\\\').replace('`', '\\`')
+            page.runJavaScript(f"handleChatMessageJson(`{safe_msg}`);")
             
         QTimer.singleShot(0, trigger_error)
 

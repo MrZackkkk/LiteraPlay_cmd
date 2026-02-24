@@ -10,11 +10,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Connect Python Signals to JS functions
         backend.apiValidationResult.connect(handleApiValidation);
         backend.libraryLoaded.connect(renderLibrary);
-        backend.chatMessageReceived.connect(renderChatMessage);
+        backend.chatMessageReceived.connect(handleChatMessageJson);
         backend.chatOptionsUpdated.connect(renderChatOptions);
         backend.chatStarted.connect(handleChatStarted);
         backend.loadingStateChanged.connect(toggleLoading);
-        backend.chatError.connect((msg) => renderChatMessage("System", "Грешка: " + msg, false, true));
+        backend.chatError.connect((msg) => _renderChatMessage("System", "Грешка: " + msg, false, true));
 
         // Tell Python we are ready
         backend.request_initial_state();
@@ -117,11 +117,20 @@ function startChat(key, charName, color) {
 }
 
 function handleChatStarted(intro, firstMessage) {
-    renderChatMessage("System", intro, false, true);
-    renderChatMessage(currentCharacterName, firstMessage, false, false);
+    _renderChatMessage("System", intro, false, true);
+    _renderChatMessage(currentCharacterName, firstMessage, false, false);
 }
 
-function renderChatMessage(sender, text, isUser, isSystem) {
+function handleChatMessageJson(jsonStr) {
+    try {
+        const data = JSON.parse(jsonStr);
+        _renderChatMessage(data.sender, data.text, data.isUser, data.isSystem);
+    } catch (e) {
+        console.error("Failed to parse chat message JSON:", e);
+    }
+}
+
+function _renderChatMessage(sender, text, isUser, isSystem) {
     const history = document.getElementById("chat-history");
     const wrapper = document.createElement("div");
     wrapper.className = `msg-wrapper ${isSystem ? 'system' : (isUser ? 'user' : 'ai')}`;
@@ -142,9 +151,17 @@ function renderChatMessage(sender, text, isUser, isSystem) {
     setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
 }
 
-function renderChatOptions(optionsArray) {
+function renderChatOptions(optionsJson) {
     const container = document.getElementById("chat-options");
     container.innerHTML = "";
+
+    let optionsArray = [];
+    try {
+        optionsArray = JSON.parse(optionsJson);
+    } catch (e) {
+        console.error("Failed to parse chat options:", e);
+        return;
+    }
 
     optionsArray.forEach(opt => {
         const btn = document.createElement("button");
@@ -153,7 +170,7 @@ function renderChatOptions(optionsArray) {
         btn.onmouseover = () => btn.style.borderColor = currentColor;
         btn.onmouseout = () => btn.style.borderColor = "var(--border)";
         btn.onclick = () => {
-            renderChatMessage("Ти", opt, true, false);
+            _renderChatMessage("Ти", opt, true, false);
             container.innerHTML = ""; // Clear options
             backend.send_user_message(opt);
         };
@@ -167,7 +184,7 @@ function sendInputMsg() {
     if (!text) return;
 
     input.value = "";
-    renderChatMessage("Ти", text, true, false);
+    _renderChatMessage("Ти", text, true, false);
     document.getElementById("chat-options").innerHTML = ""; // Clear options
 
     backend.send_user_message(text);
