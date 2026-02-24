@@ -2,12 +2,6 @@ let backend = null;
 let currentCharacterName = "";
 let currentColor = "#3B82F6";
 
-function escapeHTML(str) {
-    const div = document.createElement("div");
-    div.appendChild(document.createTextNode(str));
-    return div.innerHTML;
-}
-
 // Initialize QWebChannel
 document.addEventListener("DOMContentLoaded", () => {
     new QWebChannel(qt.webChannelTransport, (channel) => {
@@ -16,11 +10,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Connect Python Signals to JS functions
         backend.apiValidationResult.connect(handleApiValidation);
         backend.libraryLoaded.connect(renderLibrary);
-        backend.chatMessageReceived.connect(renderChatMessage);
+        backend.chatMessageReceived.connect(handleChatMessageJson);
         backend.chatOptionsUpdated.connect(renderChatOptions);
         backend.chatStarted.connect(handleChatStarted);
         backend.loadingStateChanged.connect(toggleLoading);
-        backend.chatError.connect((msg) => renderChatMessage("System", "Грешка: " + msg, false, true));
+        backend.chatError.connect((msg) => _renderChatMessage("System", "Грешка: " + msg, false, true));
 
         // Tell Python we are ready
         backend.request_initial_state();
@@ -31,9 +25,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function setupEventListeners() {
     // API Screen
-    document.getElementById("btn-verify").addEventListener("click", submitApiKey);
-    document.getElementById("api-key-input").addEventListener("keypress", (e) => {
-        if (e.key === "Enter") submitApiKey();
+    document.getElementById("btn-verify").addEventListener("click", () => {
+        const key = document.getElementById("api-key-input").value.trim();
+        if (!key) return;
+
+        document.getElementById("btn-verify").disabled = true;
+        document.getElementById("btn-verify").innerText = "Checking...";
+        document.getElementById("api-status").innerText = "Проверка на API ключ...";
+        backend.verify_api_key(key);
     });
 
     document.getElementById("btn-dialog-no").addEventListener("click", () => {
@@ -57,17 +56,6 @@ function setupEventListeners() {
     document.getElementById("chat-input").addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendInputMsg();
     });
-}
-
-function submitApiKey() {
-    const key = document.getElementById("api-key-input").value.trim();
-    if (!key) return;
-
-    document.getElementById("btn-verify").disabled = true;
-    document.getElementById("btn-verify").innerText = "Checking...";
-    document.getElementById("api-status").style.color = "var(--text-secondary)";
-    document.getElementById("api-status").innerText = "Проверка на API ключ...";
-    backend.verify_api_key(key);
 }
 
 function showScreen(name) {
@@ -107,9 +95,9 @@ function renderLibrary(libraryJson) {
         const safeColor = data.color || "var(--accent)";
 
         card.innerHTML = `
-            <h2>${escapeHTML(data.title)}</h2>
-            <p class="char-info" style="color: ${safeColor}">Герой: ${escapeHTML(data.character)}</p>
-            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${escapeHTML(key)}', '${escapeHTML(data.character)}', '${safeColor}')">Започни разговор</button>
+            <h2>${data.title}</h2>
+            <p class="char-info" style="color: ${safeColor}">Герой: ${data.character}</p>
+            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${key}', '${data.character}', '${safeColor}')">Започни разговор</button>
         `;
         container.appendChild(card);
     }
@@ -129,23 +117,31 @@ function startChat(key, charName, color) {
 }
 
 function handleChatStarted(intro, firstMessage) {
-    renderChatMessage("System", intro, false, true);
-    renderChatMessage(currentCharacterName, firstMessage, false, false);
+    _renderChatMessage("System", intro, false, true);
+    _renderChatMessage(currentCharacterName, firstMessage, false, false);
 }
 
-function renderChatMessage(sender, text, isUser, isSystem) {
+function handleChatMessageJson(jsonStr) {
+    try {
+        const data = JSON.parse(jsonStr);
+        _renderChatMessage(data.sender, data.text, data.isUser, data.isSystem);
+    } catch (e) {
+        console.error("Failed to parse chat message JSON:", e);
+    }
+}
+
+function _renderChatMessage(sender, text, isUser, isSystem) {
     const history = document.getElementById("chat-history");
     const wrapper = document.createElement("div");
     wrapper.className = `msg-wrapper ${isSystem ? 'system' : (isUser ? 'user' : 'ai')}`;
 
     let html = "";
     if (!isSystem) {
-        html += `<span class="sender-name">${escapeHTML(sender)}</span>`;
+        html += `<span class="sender-name">${sender}</span>`;
     }
 
-    // Sanitize and convert newlines to breaks
-    const safeText = escapeHTML(text);
-    const formattedText = safeText.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+    // Convert newlines to breaks
+    const formattedText = text.replace(/\\n/g, '<br>');
     html += `<div class="bubble">${formattedText}</div>`;
 
     wrapper.innerHTML = html;
@@ -155,9 +151,17 @@ function renderChatMessage(sender, text, isUser, isSystem) {
     setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
 }
 
-function renderChatOptions(optionsArray) {
+function renderChatOptions(optionsJson) {
     const container = document.getElementById("chat-options");
     container.innerHTML = "";
+
+    let optionsArray = [];
+    try {
+        optionsArray = JSON.parse(optionsJson);
+    } catch (e) {
+        console.error("Failed to parse chat options:", e);
+        return;
+    }
 
     optionsArray.forEach(opt => {
         const btn = document.createElement("button");
@@ -166,7 +170,7 @@ function renderChatOptions(optionsArray) {
         btn.onmouseover = () => btn.style.borderColor = currentColor;
         btn.onmouseout = () => btn.style.borderColor = "var(--border)";
         btn.onclick = () => {
-            renderChatMessage("Ти", opt, true, false);
+            _renderChatMessage("Ти", opt, true, false);
             container.innerHTML = ""; // Clear options
             backend.send_user_message(opt);
         };
@@ -180,7 +184,7 @@ function sendInputMsg() {
     if (!text) return;
 
     input.value = "";
-    renderChatMessage("Ти", text, true, false);
+    _renderChatMessage("Ти", text, true, false);
     document.getElementById("chat-options").innerHTML = ""; // Clear options
 
     backend.send_user_message(text);

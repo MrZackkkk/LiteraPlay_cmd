@@ -1,9 +1,3 @@
-import os
-from pathlib import Path
-
-# Project root: two levels up from this file (src/literaplay/data.py -> project root)
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-
 # Define common rules for AI behavior
 COMMON_RULES = """
 You are an AI playing a role in an interactive novel.
@@ -18,22 +12,6 @@ Rules:
 4. Response language: Bulgarian.
 5. Format your response as a single JSON object.
 """
-
-def load_text_content(filepath):
-    """Loads text content from a file."""
-    if not os.path.exists(filepath):
-        print(f"File not found: {filepath}")
-        return ""
-    try:
-        with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read()
-    except Exception as e:
-        print(f"Error reading file {filepath}: {e}")
-        return ""
-
-# Path to the book text file (resolved relative to project root)
-book_path = str(_PROJECT_ROOT / "books" / "Ivan Vazov - TBc - 2. Pod igoto - 3753.txt")
-pod_igoto_text = load_text_content(book_path)
 
 LIBRARY = {
     "pod_igoto": {
@@ -78,8 +56,7 @@ If the user deviates, adapt logically while maintaining Bay Marko's persona.
 START:
 You have just said: "Давранма!"
 Wait for the user's response.
-""",
-        "pdf_context": pod_igoto_text
+"""
     },
     "nemili": {
         "title": "Немили-недраги",
@@ -88,8 +65,7 @@ Wait for the user's response.
         "intro": "Кръчмата на Знаменосеца в Браила...",
         "first_message": "Да живей България!",
         "choices": [],
-        "prompt": f"{COMMON_RULES}\nYou are Makedonski.\n",
-        "pdf_context": ""
+        "prompt": f"{COMMON_RULES}\nYou are Makedonski.\n"
     },
     "tyutyun": {
         "title": "Тютюн",
@@ -98,7 +74,6 @@ Wait for the user's response.
         "intro": "В салона на Никотиана...",
         "first_message": "Здравейте.",
         "choices": [],
-        "prompt": f"{COMMON_RULES}\nYou are Irina.\n",
-        "pdf_context": ""
+        "prompt": f"{COMMON_RULES}\nYou are Irina.\n"
     }
 }

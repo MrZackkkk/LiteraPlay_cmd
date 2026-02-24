@@ -1,19 +1,14 @@
 import os
-from pathlib import Path
 from literaplay.dependency_compat import load_dotenv_functions
-
-# Project root: two levels up from config.py (src/literaplay/config.py -> project root)
-_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-_DOTENV_PATH = str(_PROJECT_ROOT / ".env")
 
 load_dotenv, set_key = load_dotenv_functions()
 
 # Load environment variables
-load_dotenv(_DOTENV_PATH)
+load_dotenv()
 
 # API Configuration
 API_KEY = os.getenv("GOOGLE_API_KEY")
-DEFAULT_MODEL = "gemini-3-flash-preview"
+DEFAULT_MODEL = "gemini-2.5-flash"  # Updated to a stable model name, or keep what was there
 
 # UI Configuration
 WINDOW_SIZE = "600x800"
@@ -25,7 +20,9 @@ COLOR_USER_BUBBLE = "#1F6AA5"
 COLOR_AI_BUBBLE = "#333333"
 
 
-def save_api_key(key: str, dotenv_path: str = _DOTENV_PATH):
+
+
+def save_api_key(key: str, dotenv_path: str = ".env"):
     """Persist API key in .env and update runtime config."""
     cleaned_key = (key or "").strip()
     if not cleaned_key:
