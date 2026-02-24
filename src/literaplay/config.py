@@ -8,7 +8,7 @@ load_dotenv()
 
 # API Configuration
 API_KEY = os.getenv("GOOGLE_API_KEY")
-DEFAULT_MODEL = "gemini-2.5-flash"
+DEFAULT_MODEL = "gemini-3-flash-preview"
 
 # UI Configuration
 WINDOW_SIZE = "600x800"
