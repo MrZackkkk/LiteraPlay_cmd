@@ -1,99 +1,219 @@
-# LiteraPlay - Interactive Literature
+# 📚 LiteraPlay — Interactive Bulgarian Literature
 
-LiteraPlay is a Python-based desktop application that brings classic characters from Bulgarian literature to life through interactive AI-powered conversations. Built with CustomTkinter and Google's Gemini AI, the application allows users to immerse themselves in famous literary scenes and role-play with iconic characters.
+**LiteraPlay** is a desktop application that brings classic Bulgarian literary characters to life through AI-powered, interactive conversations. Select a novel, step into a famous scene, and role-play with iconic characters — all powered by Google's Gemini AI.
 
-## Features
+Built with **PySide6 / Qt WebEngine** for a modern hybrid UI and backed by the **Google Gemini** generative AI API.
 
-* **Interactive Chat Interface:** A modern, dark-themed GUI built with CustomTkinter.
-* **AI-Powered Characters:** Integrates with Google's Gemini API to generate context-aware, in-character responses.
-* **Literary Scenarios:** Pre-configured scenarios with specific roles, settings, and opening lines for characters like Makedonski, Boycho Ognyanov, and Irina.
-* **Dynamic Role-Playing:** The AI is instructed to strictly adhere to character constraints, maintain internal logic, and treat the user as a new participant in the scene.
-* **Conversation Tools:** Includes pre-defined dialogue options to help users start the conversation, alongside a free-text input field.
+---
 
-## Supported Works
+## ✨ Features
 
-The current version supports the following literary works and characters:
+- **Immersive Role-Play** — Step into pivotal moments from Bulgarian literature and converse with characters who stay faithful to their source material.
+- **AI-Powered Dialogue** — Gemini generates context-aware, in-character responses with strict factual accuracy and character consistency.
+- **Hybrid Desktop UI** — A native PySide6 window hosts a polished HTML/CSS/JS frontend via Qt WebChannel, combining desktop reliability with web-grade aesthetics.
+- **Threaded AI Requests** — Chat and API-key verification run on background `QThread` workers, keeping the UI responsive.
+- **Dynamic Choice System** — Pre-defined dialogue options guide the conversation alongside a free-text input field.
+- **PDF / Text Context Injection** — Full novel text can be loaded (`.txt` or `.pdf`) and sent to the AI as factual context for grounded responses.
+- **Dual SDK Support** — Works with both the modern `google-genai` SDK and the legacy `google-generativeai` package, with automatic fallback.
+- **Automatic Rate-Limit Retry** — Handles HTTP 429 errors with exponential back-off (up to 5 retries).
 
-1. **Nemili-nedragi (Ivan Vazov):** Chat with **Makedonski** in the flag-bearer's tavern in Braila.
-2. **Pod Igoto (Ivan Vazov):** Encounter **Boycho Ognyanov** hiding in the old mill near Byala Cherkva.
-3. **Tyutyun (Dimitar Dimov):** Conversate with **Irina** in the "Nicotiana" salon.
+---
 
-## Prerequisites
+## 📖 Supported Literary Works
 
-* Python 3.8 or higher
-* A Google Cloud Project with the Gemini API enabled
-* A valid Google API Key
+| # | Work | Author | Character | Scene |
+|---|------|--------|-----------|-------|
+| 1 | **Под игото** *(Under the Yoke)* | Иван Вазов | **Бай Марко** | A stormy night — an intruder in the barn |
+| 2 | **Немили-недраги** | Иван Вазов | **Македонски** | The flag-bearer's tavern in Braila |
+| 3 | **Тютюн** *(Tobacco)* | Димитър Димов | **Ирина** | The Nicotiana salon |
 
-## Installation
+> **Note:** *Под игото* includes full novel text loaded from `books/` for enhanced AI grounding. The other scenarios use prompt-only context.
 
-1. Clone the repository to your local machine.
-2. Install the required dependencies using pip:
-```bash
-pip install -r requirements.txt
-```
+---
 
-*Note: Key dependencies include `customtkinter`, `google-genai`, `pytest`, and `python-dotenv`.*
+## 🛠 Prerequisites
 
-## Configuration
+- **Python 3.10+**
+- A **Google API Key** with access to the Gemini API
 
-1. Create a `.env` file in the root directory of the project, or let the graphical UI prompt you on first launch.
-2. If manually configuring, add your Google API key to the `.env` file using the following format:
+---
+
+## 🚀 Installation
+
+1. **Clone** the repository:
+   ```bash
+   git clone https://github.com/MrZackkkk/LiteraPlay_cmd.git
+   cd LiteraPlay_cmd
+   ```
+
+2. **Create a virtual environment** (recommended):
+   ```bash
+   python -m venv .venv
+   # Windows
+   .venv\Scripts\activate
+   # macOS / Linux
+   source .venv/bin/activate
+   ```
+
+3. **Install dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+### Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `PySide6 >=6.6.0` | Qt 6 bindings — native window + WebEngine |
+| `google-genai >=1.0.0` | Google Gemini AI SDK |
+| `python-dotenv` | `.env` file loading (optional — fallback built-in) |
+| `pypdf` | PDF text extraction for context injection |
+
+---
+
+## ⚙️ Configuration
+
+LiteraPlay reads its API key from an environment variable. You can configure it in two ways:
+
+### Option A — `.env` file (recommended)
+Create a `.env` file in the project root:
 ```env
 GOOGLE_API_KEY=your_actual_api_key_here
 ```
 
-## Running the Application
+### Option B — In-app prompt
+If no key is found at startup, the app will display an API-key entry screen where you can paste and verify your key. You'll be asked whether to persist it to `.env`.
 
-To start the main application dashboard from the module:
+---
+
+## ▶️ Running the Application
 
 ```bash
-# Before running you must include the source directory in the Python Path or be running from an IDE
-$env:PYTHONPATH="src"
+# Set the source directory on your Python path
+# PowerShell
+$env:PYTHONPATH = "src"
+# Bash
+export PYTHONPATH=src
+
+# Launch LiteraPlay
 python -m literaplay.main
 ```
 
-Upon launching, select a literary work from the main menu to begin a session. You can choose from suggested responses or type your own messages.
+On launch you will see:
 
-### Checking Available Models
+1. **API Key Screen** — if no key is stored (enter and verify your key).
+2. **Library Menu** — pick a literary work to begin.
+3. **Chat Screen** — role-play with the character using suggested options or free text.
 
-A utility script is provided to verify your API connection and list available Gemini models:
+### Checking Available Gemini Models
 
 ```bash
-$env:PYTHONPATH="src"
 python -m literaplay.check_models
 ```
 
-## Project Structure (src layout)
+---
 
-LiteraPlay follows a standard Python package structure using the `/src` and `/tests` abstraction:
+## 📁 Project Structure
 
-* `src/literaplay/main.py`: The entry point of the application. Handles the GUI setup, application loop, threading for AI requests, and API communication.
-* `src/literaplay/data.py`: Contains the literary database, including character prompts, introductory texts, and scenario-specific rules.
-* `src/literaplay/config.py`: Environment configuration and Theme styling parameters.
-* `src/literaplay/ai_service.py`: API abstractions interacting with Gemini.
-* `tests/`: Contains module and integration level Pytest suites.
+```
+LiteraPlay_cmd/
+├── books/                          # Source novel texts (.txt)
+├── src/
+│   └── literaplay/
+│       ├── __init__.py
+│       ├── main.py                 # Entry point — QMainWindow, WebChannel bridge, QThread workers
+│       ├── ai_service.py           # AIService class — dual SDK init, chat creation, message sending + retry
+│       ├── config.py               # Environment config — API key, model name, UI defaults
+│       ├── data.py                 # LIBRARY dict — scenarios, character prompts, novel text loading
+│       ├── response_parser.py      # JSON response parser — handles plain, fenced, and embedded JSON
+│       ├── dependency_compat.py    # Fallback implementations for python-dotenv
+│       ├── pdf_loader.py           # PDF text extraction via pypdf
+│       ├── check_models.py         # CLI utility to list available Gemini models
+│       └── ui/
+│           ├── index.html          # Frontend markup (API screen, menu, chat)
+│           ├── style.css           # Styles — dark theme, glassmorphism, animations
+│           └── script.js           # Frontend logic — QWebChannel signals, DOM rendering
+├── tests/                          # Pytest test suites
+│   ├── test_ai_service.py
+│   ├── test_check_models.py
+│   ├── test_data.py
+│   ├── test_dependency_compat.py
+│   ├── test_main.py
+│   ├── test_pdf_integration.py
+│   ├── test_pdf_loader.py
+│   └── test_response_parser.py
+├── requirements.txt
+├── pyrightconfig.json
+└── .gitignore
+```
 
-## Testing & Quality Assurance
+---
 
-To execute the unit testing suites manually to ensure core service stability:
+## 🏗 Architecture Overview
+
+```
+┌─────────────────────────────────────────────┐
+│               PySide6 MainWindow            │
+│  ┌───────────────────────────────────────┐  │
+│  │       QWebEngineView (Chromium)       │  │
+│  │  ┌─────────────────────────────────┐  │  │
+│  │  │   HTML / CSS / JS  (ui/)        │  │  │
+│  │  │   Renders screens, chat bubbles │  │  │
+│  │  └──────────┬──────────────────────┘  │  │
+│  └─────────────┼─────────────────────────┘  │
+│       QWebChannel (signals/slots)           │
+│  ┌─────────────┴─────────────────────────┐  │
+│  │         BackendBridge (QObject)        │  │
+│  │  • verify_api_key()                   │  │
+│  │  • start_chat_session()               │  │
+│  │  • send_user_message()                │  │
+│  └─────────────┬─────────────────────────┘  │
+│       QThread workers (async AI calls)      │
+│  ┌─────────────┴─────────────────────────┐  │
+│  │         AIService (google-genai)       │  │
+│  │  • create_chat()                      │  │
+│  │  • send_message() + retry             │  │
+│  └───────────────────────────────────────┘  │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## 🧪 Testing
 
 ```bash
-$env:PYTHONPATH="src"
-
-# Run tests
+# Run the full test suite
+$env:PYTHONPATH = "src"        # PowerShell
 pytest tests/ -v
 
-# Run tests with coverage diagnostics
+# With coverage report
 pytest tests/ --cov=src/literaplay --cov-report=term-missing
 ```
 
-## Troubleshooting
+---
 
-### ModuleNotFoundError: No module named 'customtkinter'
-If you encounter this error, it means the required dependencies are not installed. Please run:
+## 🔧 Troubleshooting
+
+### `ModuleNotFoundError: No module named 'literaplay'`
+The package lives under `src/literaplay`. Always run with `src` on your `PYTHONPATH` and use the `-m` flag:
+```bash
+$env:PYTHONPATH = "src"
+python -m literaplay.main
+```
+
+### `ModuleNotFoundError: No module named 'PySide6'`
+Install the project dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-### ModuleNotFoundError: No module named 'literaplay'
-Because the app is nested under `src/literaplay`, running scripts directly by filepath (e.g. `python src/literaplay/main.py`) will fail to find absolute package references. Always execute using the python module operator `-m`, e.g. `python -m literaplay.main`, while having `src/` in your `PYTHONPATH`.
+### API key errors / `429 Resource Exhausted`
+- Verify your key is valid with `python -m literaplay.check_models`.
+- The app automatically retries on 429 errors with exponential back-off, but sustained overload may require waiting or switching to a different model.
+- The default model is configured in `config.py` (`DEFAULT_MODEL`).
+
+---
+
+## 📄 License
+
+This project is provided for educational purposes.

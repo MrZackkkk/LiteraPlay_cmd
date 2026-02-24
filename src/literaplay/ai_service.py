@@ -167,8 +167,8 @@ class AIService:
         if not chat_session:
             raise ValueError("Chat session is not active")
 
-        max_retries = 3
-        retry_delay = 2
+        max_retries = 5
+        retry_delay = 5
 
         for attempt in range(max_retries):
             try:

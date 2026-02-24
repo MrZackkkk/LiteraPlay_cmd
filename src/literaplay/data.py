@@ -1,4 +1,8 @@
 import os
+from pathlib import Path
+
+# Project root: two levels up from this file (src/literaplay/data.py -> project root)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # Define common rules for AI behavior
 COMMON_RULES = """
@@ -27,8 +31,8 @@ def load_text_content(filepath):
         print(f"Error reading file {filepath}: {e}")
         return ""
 
-# Path to the book text file
-book_path = os.path.join("books", "Ivan Vazov - TBc - 2. Pod igoto - 3753.txt")
+# Path to the book text file (resolved relative to project root)
+book_path = str(_PROJECT_ROOT / "books" / "Ivan Vazov - TBc - 2. Pod igoto - 3753.txt")
 pod_igoto_text = load_text_content(book_path)
 
 LIBRARY = {
