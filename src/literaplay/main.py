@@ -128,11 +128,10 @@ class BackendBridge(QObject):
         self.api_worker.finished_signal.connect(self._on_api_validation_worker_done)
         self.api_worker.start()
 
+    @Slot(bool, str)
     def _on_api_validation_worker_done(self, is_valid, message):
-        # We are now executing in the main thread (thanks to default AutoConnection acting as Queued across threads)
-        # But to be absolutely safe with QWebChannel, we defer the emit to the next event loop cycle
-        from PySide6.QtCore import QTimer
-        QTimer.singleShot(0, lambda: self.apiValidationResult.emit(is_valid, message))
+        print(f"[DEBUG] API validation result: valid={is_valid}, msg={message}")
+        self.apiValidationResult.emit(is_valid, message)
 
     @Slot(str, bool)
     def save_api_key_decision(self, key, should_save):
@@ -174,26 +173,21 @@ class BackendBridge(QObject):
         self.worker.error_signal.connect(self._on_chat_error_worker)
         self.worker.start()
 
+    @Slot(dict)
     def _on_chat_response_worker(self, data):
         self.pdf_context_sent = True
         reply = data.get('reply', '')
         options = data.get('options', [])
-        
-        from PySide6.QtCore import QTimer
-        def trigger_ui():
-            self.loadingStateChanged.emit(False)
-            self.chatMessageReceived.emit(self.current_work['character'], reply, False, False)
-            self.chatOptionsUpdated.emit(options)
-            
-        QTimer.singleShot(0, trigger_ui)
+        print(f"[DEBUG] Chat response received, reply length={len(reply)}")
+        self.loadingStateChanged.emit(False)
+        self.chatMessageReceived.emit(self.current_work['character'], reply, False, False)
+        self.chatOptionsUpdated.emit(options)
 
+    @Slot(str)
     def _on_chat_error_worker(self, message):
-        from PySide6.QtCore import QTimer
-        def trigger_error():
-            self.loadingStateChanged.emit(False)
-            self.chatError.emit(message)
-            
-        QTimer.singleShot(0, trigger_error)
+        print(f"[DEBUG] Chat error: {message}")
+        self.loadingStateChanged.emit(False)
+        self.chatError.emit(message)
 
 
 # ================== MAIN APP ==================
