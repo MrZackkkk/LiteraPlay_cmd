@@ -20,6 +20,15 @@ IMPORTANT STRICT GUIDELINES:
 - **DYNAMIC SITUATION**: The situation evolves based on the conversation history. React to previous events and choices.
 - **NO HALLUCINATIONS**: Do not reference modern technology or concepts unless relevant to the specific prompt.
 - **SHORT REPLIES**: Keep your replies to 2-4 sentences MAX. Speak like a real person in conversation — short, direct, natural. Do NOT write long poetic descriptions or monologues. A single sentence reply is often best.
+- **STORY STATE**: Before each user message you will receive a [CONTEXT] block.
+  Use it to stay grounded in the current chapter, location, mood, and plot.
+  NEVER reveal the context block to the user. NEVER skip ahead of the current chapter.
+  When the END CONDITION described in the context is reached naturally, set "ended": true.
+- **OPTIONAL METADATA**: You MAY include these extra keys in your JSON response
+  (they help the system track your state — omit them if not applicable):
+  - "mood": a short string describing your current emotional state
+  - "location": a short string if the scene location changes
+  - "key_event": a short string if a significant plot beat just occurred
 """
 
 
@@ -108,3 +117,21 @@ class AIService:
                     raise
 
         raise RuntimeError("Max retries reached")
+
+    def send_message_with_context(
+        self,
+        chat_session,
+        user_text: str,
+        context_injection: str,
+        status_callback: Optional[Callable[[str], None]] = None,
+    ) -> str:
+        """Send a message with story-state context prepended.
+
+        If *context_injection* is empty the call is equivalent to
+        :meth:`send_message`.
+        """
+        if context_injection:
+            augmented = f"[CONTEXT]\n{context_injection}\n[/CONTEXT]\n\nUser: {user_text}"
+        else:
+            augmented = user_text
+        return self.send_message(chat_session, augmented, status_callback)

@@ -85,6 +85,37 @@ class TestAIService(unittest.TestCase):
         response = service.send_message(mock_chat_session, "Hello")
         self.assertEqual(response, "")
 
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_with_context_prepends_context(self, mock_client_cls):
+        service = AIService(self.api_key, self.model_name)
+        mock_chat_session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Response"
+        mock_chat_session.send_message.return_value = mock_response
+
+        service.send_message_with_context(
+            mock_chat_session, "Hello", "Chapter: Test"
+        )
+
+        sent_text = mock_chat_session.send_message.call_args[0][0]
+        self.assertIn("[CONTEXT]", sent_text)
+        self.assertIn("Chapter: Test", sent_text)
+        self.assertIn("User: Hello", sent_text)
+
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_with_context_empty_context(self, mock_client_cls):
+        service = AIService(self.api_key, self.model_name)
+        mock_chat_session = MagicMock()
+        mock_response = MagicMock()
+        mock_response.text = "Response"
+        mock_chat_session.send_message.return_value = mock_response
+
+        service.send_message_with_context(mock_chat_session, "Hello", "")
+
+        sent_text = mock_chat_session.send_message.call_args[0][0]
+        self.assertEqual(sent_text, "Hello")
+        self.assertNotIn("[CONTEXT]", sent_text)
+
 
 @patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
 @patch("literaplay.ai_service.genai.Client")

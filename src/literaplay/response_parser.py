@@ -2,6 +2,8 @@ import json
 import re
 from typing import Any
 
+from literaplay.story_state import ChapterDef, StoryState
+
 
 def parse_ai_json_response(response_text: str) -> dict[str, Any] | None:
     """Parse an AI response expected to contain a JSON object.
@@ -47,4 +49,53 @@ def _try_parse(text: str) -> Any:
         return json.loads(text)
     except (TypeError, json.JSONDecodeError):
         return None
+
+
+# ── Response validation against story state ──────────────────────────
+
+_MAX_REPLY_CHARS = 1000
+_FALLBACK_OPTIONS = [
+    "Продължи...",
+    "Разкажи ми повече.",
+]
+
+
+def validate_story_response(
+    data: dict,
+    state: StoryState | None = None,
+    chapter: ChapterDef | None = None,
+    is_last_chapter: bool = True,
+) -> dict:
+    """Sanitize / validate AI response against current story state.
+
+    Returns a *new* dict with corrected values.
+    """
+    result = dict(data)  # shallow copy
+
+    # --- reply ---
+    reply = result.get("reply") or ""
+    if not reply.strip():
+        reply = "..."
+    if len(reply) > _MAX_REPLY_CHARS:
+        reply = reply[:_MAX_REPLY_CHARS].rsplit(" ", 1)[0] + "..."
+    result["reply"] = reply
+
+    # --- ended ---
+    ended = result.get("ended", False)
+    if ended and not is_last_chapter:
+        # AI signalled end, but there are more chapters → chapter-end, not story-end
+        result["ended"] = False
+        result["_chapter_ended"] = True
+    else:
+        result["_chapter_ended"] = False
+
+    # --- options ---
+    options = result.get("options")
+    if not isinstance(options, list):
+        options = []
+    if not result.get("ended") and not result.get("_chapter_ended") and len(options) == 0:
+        options = list(_FALLBACK_OPTIONS)
+    result["options"] = options
+
+    return result
 

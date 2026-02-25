@@ -16,7 +16,8 @@ from PySide6.QtCore import QUrl, QObject, Slot, Signal, QThread
 from literaplay import config
 from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
 from literaplay.data import LIBRARY
-from literaplay.response_parser import parse_ai_json_response
+from literaplay.response_parser import parse_ai_json_response, validate_story_response
+from literaplay.story_state import StoryStateManager
 
 UI_PATH = Path(__file__).parent / "ui" / "index.html"
 
@@ -26,15 +27,18 @@ class AIChatWorker(QThread):
     response_signal = Signal(dict)
     error_signal = Signal(str)
 
-    def __init__(self, ai_service, chat_session, user_text):
+    def __init__(self, ai_service, chat_session, user_text, context_injection=""):
         super().__init__()
         self.ai_service = ai_service
         self.chat_session = chat_session
         self.user_text = user_text
+        self.context_injection = context_injection
 
     def run(self):
         try:
-            response_text = self.ai_service.send_message(self.chat_session, self.user_text)
+            response_text = self.ai_service.send_message_with_context(
+                self.chat_session, self.user_text, self.context_injection
+            )
 
             # Parse response
             data = parse_ai_json_response(response_text)
@@ -42,13 +46,19 @@ class AIChatWorker(QThread):
                 self.response_signal.emit({
                     "reply": data.get("reply", response_text),
                     "options": data.get("options", []),
-                    "ended": data.get("ended", False)
+                    "ended": data.get("ended", False),
+                    "mood": data.get("mood", ""),
+                    "location": data.get("location", ""),
+                    "key_event": data.get("key_event", ""),
                 })
             else:
                 self.response_signal.emit({
                     "reply": response_text,
                     "options": [],
-                    "ended": False
+                    "ended": False,
+                    "mood": "",
+                    "location": "",
+                    "key_event": "",
                 })
         except Exception as e:
             traceback.print_exc()
@@ -80,6 +90,8 @@ class BackendBridge(QObject):
     chatError = Signal(str)
     chatEnded = Signal(str)  # final narrative text
     loadingStateChanged = Signal(bool)
+    storyProgressUpdated = Signal(str)  # JSON: chapter_title, turn, progress_pct
+    chapterTransition = Signal(str)     # chapter title for transition message
 
     def __init__(self, app_window):
         super().__init__()
@@ -90,6 +102,7 @@ class BackendBridge(QObject):
         self.current_work = None
         self.worker = None
         self.api_worker = None
+        self.story_manager = None
         
         if config.API_KEY:
             try:
@@ -133,13 +146,19 @@ class BackendBridge(QObject):
     @Slot(str)
     def start_chat_session(self, work_key):
         self.current_work = LIBRARY[work_key]
+        # Store the key inside work data so StoryStateManager can reference it
+        self.current_work['_key'] = work_key
         self.chat_session = None
+        self.story_manager = StoryStateManager(self.current_work)
         
         if self.ai_service:
             try:
                 self.chat_session = self.ai_service.create_chat(self.current_work['prompt'])
                 self.chatStarted.emit(self.current_work['intro'], self.current_work.get('first_message', 'Здравей!'))
                 self.chatOptionsUpdated.emit(json.dumps(self.current_work.get('choices', [])))
+                # Emit initial progress
+                if self.story_manager.has_chapters:
+                    self.storyProgressUpdated.emit(json.dumps(self.story_manager.get_progress_info()))
             except Exception as e:
                 self.chatError.emit(str(e))
 
@@ -151,20 +170,62 @@ class BackendBridge(QObject):
 
         self.loadingStateChanged.emit(True)
 
-        self.worker = AIChatWorker(self.ai_service, self.chat_session, text)
+        # Build context injection from story state
+        context = ""
+        if self.story_manager and self.story_manager.has_chapters:
+            context = self.story_manager.build_context_injection()
+
+        self.worker = AIChatWorker(self.ai_service, self.chat_session, text, context)
         self.worker.response_signal.connect(self._on_chat_response_worker)
         self.worker.error_signal.connect(self._on_chat_error_worker)
         self.worker.start()
 
     @Slot(dict)
     def _on_chat_response_worker(self, data):
+        self.loadingStateChanged.emit(False)
+
+        # Validate & sanitize against story state
+        if self.story_manager and self.story_manager.has_chapters:
+            data = validate_story_response(
+                data,
+                state=self.story_manager.get_state(),
+                chapter=self.story_manager.current_chapter(),
+                is_last_chapter=self.story_manager.is_last_chapter(),
+            )
+            # Record the turn so state updates
+            self.story_manager.record_turn(data)
+
         reply = data.get('reply', '')
         options = data.get('options', [])
         ended = data.get('ended', False)
-        self.loadingStateChanged.emit(False)
+        chapter_ended = data.get('_chapter_ended', False)
 
         if ended:
             self.chatEnded.emit(reply)
+        elif chapter_ended:
+            # Chapter transition: advance to next chapter
+            self.chatMessageReceived.emit(json.dumps({
+                "sender": self.current_work['character'],
+                "text": reply,
+                "isUser": False,
+                "isSystem": False
+            }))
+            advanced = self.story_manager.advance_chapter()
+            if advanced:
+                next_ch = self.story_manager.current_chapter()
+                title = next_ch.title if next_ch else ""
+                self.chapterTransition.emit(title)
+                # Create a new chat session for the next chapter
+                try:
+                    self.chat_session = self.ai_service.create_chat(self.current_work['prompt'])
+                except Exception as e:
+                    self.chatError.emit(str(e))
+                    return
+                self.storyProgressUpdated.emit(json.dumps(self.story_manager.get_progress_info()))
+                self.chatOptionsUpdated.emit(json.dumps(options))
+            else:
+                # No more chapters — story is over
+                self.chatEnded.emit(reply)
         else:
             self.chatMessageReceived.emit(json.dumps({
                 "sender": self.current_work['character'],
@@ -173,6 +234,9 @@ class BackendBridge(QObject):
                 "isSystem": False
             }))
             self.chatOptionsUpdated.emit(json.dumps(options))
+            # Update progress
+            if self.story_manager and self.story_manager.has_chapters:
+                self.storyProgressUpdated.emit(json.dumps(self.story_manager.get_progress_info()))
 
     @Slot(str)
     def _on_chat_error_worker(self, message):

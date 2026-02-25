@@ -16,6 +16,8 @@ document.addEventListener("DOMContentLoaded", () => {
         backend.loadingStateChanged.connect(toggleLoading);
         backend.chatError.connect((msg) => _renderChatMessage("System", "Грешка: " + msg, false, true));
         backend.chatEnded.connect(handleChatEnded);
+        backend.storyProgressUpdated.connect(handleStoryProgress);
+        backend.chapterTransition.connect(handleChapterTransition);
 
         // Tell Python we are ready
         backend.request_initial_state();
@@ -114,6 +116,13 @@ function startChat(key, charName, color) {
     document.getElementById("api-status").innerText = ""; // reset status
 
     showScreen("chat");
+
+    // Reset progress bar
+    const prog = document.getElementById("story-progress");
+    prog.classList.add("hidden");
+    document.getElementById("chapter-label").innerText = "";
+    document.getElementById("progress-bar-fill").style.width = "0%";
+
     backend.start_chat_session(key);
 }
 
@@ -238,4 +247,24 @@ function toggleLoading(isLoading) {
         input.focus();
     }
     document.getElementById("chat-history").scrollTop = document.getElementById("chat-history").scrollHeight;
+}
+
+function handleStoryProgress(jsonStr) {
+    try {
+        const info = JSON.parse(jsonStr);
+        const prog = document.getElementById("story-progress");
+        prog.classList.remove("hidden");
+
+        const label = document.getElementById("chapter-label");
+        label.innerText = `${info.chapter_title}  (${info.chapter_index + 1}/${info.total_chapters})`;
+
+        const fill = document.getElementById("progress-bar-fill");
+        fill.style.width = `${Math.min(info.progress_pct, 100)}%`;
+    } catch (e) {
+        console.error("Failed to parse story progress:", e);
+    }
+}
+
+function handleChapterTransition(chapterTitle) {
+    _renderChatMessage("System", `— ${chapterTitle} —`, false, true);
 }
