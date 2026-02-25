@@ -41,12 +41,14 @@ class AIChatWorker(QThread):
             if data and isinstance(data, dict):
                 self.response_signal.emit({
                     "reply": data.get("reply", response_text),
-                    "options": data.get("options", [])
+                    "options": data.get("options", []),
+                    "ended": data.get("ended", False)
                 })
             else:
                 self.response_signal.emit({
                     "reply": response_text,
-                    "options": []
+                    "options": [],
+                    "ended": False
                 })
         except Exception as e:
             traceback.print_exc()
@@ -76,6 +78,7 @@ class BackendBridge(QObject):
     chatOptionsUpdated = Signal(str)  # JSON string — QWebChannel cannot serialize Python lists
     chatStarted = Signal(str, str) # intro, first_message
     chatError = Signal(str)
+    chatEnded = Signal(str)  # final narrative text
     loadingStateChanged = Signal(bool)
 
     def __init__(self, app_window):
@@ -157,14 +160,19 @@ class BackendBridge(QObject):
     def _on_chat_response_worker(self, data):
         reply = data.get('reply', '')
         options = data.get('options', [])
+        ended = data.get('ended', False)
         self.loadingStateChanged.emit(False)
-        self.chatMessageReceived.emit(json.dumps({
-            "sender": self.current_work['character'],
-            "text": reply,
-            "isUser": False,
-            "isSystem": False
-        }))
-        self.chatOptionsUpdated.emit(json.dumps(options))
+
+        if ended:
+            self.chatEnded.emit(reply)
+        else:
+            self.chatMessageReceived.emit(json.dumps({
+                "sender": self.current_work['character'],
+                "text": reply,
+                "isUser": False,
+                "isSystem": False
+            }))
+            self.chatOptionsUpdated.emit(json.dumps(options))
 
     @Slot(str)
     def _on_chat_error_worker(self, message):

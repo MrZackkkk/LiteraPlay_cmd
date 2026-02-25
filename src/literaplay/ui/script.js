@@ -15,6 +15,7 @@ document.addEventListener("DOMContentLoaded", () => {
         backend.chatStarted.connect(handleChatStarted);
         backend.loadingStateChanged.connect(toggleLoading);
         backend.chatError.connect((msg) => _renderChatMessage("System", "Грешка: " + msg, false, true));
+        backend.chatEnded.connect(handleChatEnded);
 
         // Tell Python we are ready
         backend.request_initial_state();
@@ -119,6 +120,37 @@ function startChat(key, charName, color) {
 function handleChatStarted(intro, firstMessage) {
     _renderChatMessage("System", intro, false, true);
     _renderChatMessage(currentCharacterName, firstMessage, false, false);
+}
+
+function handleChatEnded(finalText) {
+    // Render the final narrative as a system message
+    _renderChatMessage("System", "\n" + finalText, false, true);
+
+    // Hide options and input area
+    document.getElementById("chat-options").innerHTML = "";
+    document.querySelector(".chat-footer").style.display = "none";
+
+    // Show a "Back to menu" button
+    const history = document.getElementById("chat-history");
+    const btnWrapper = document.createElement("div");
+    btnWrapper.className = "msg-wrapper system";
+    btnWrapper.style.textAlign = "center";
+    btnWrapper.style.padding = "1.5rem 0";
+
+    const btn = document.createElement("button");
+    btn.className = "btn-primary";
+    btn.innerText = "\u041D\u0430\u0437\u0430\u0434 \u043A\u044A\u043C \u043C\u0435\u043D\u044E\u0442\u043E";
+    btn.style.fontSize = "1rem";
+    btn.style.padding = "0.75rem 2rem";
+    btn.onclick = () => {
+        document.querySelector(".chat-footer").style.display = "";
+        showScreen("menu");
+    };
+
+    btnWrapper.appendChild(btn);
+    history.appendChild(btnWrapper);
+
+    setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
 }
 
 function handleChatMessageJson(jsonStr) {
