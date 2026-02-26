@@ -143,11 +143,21 @@ class BackendBridge(QObject):
         except Exception as e:
             self.apiValidationResult.emit(False, str(e))
 
-    @Slot(str)
-    def start_chat_session(self, work_key):
-        self.current_work = LIBRARY[work_key]
+    @Slot(str, str)
+    def start_chat_session(self, work_key, sit_key):
+        work_data = LIBRARY.get(work_key)
+        if not work_data:
+            self.chatError.emit("Work not found.")
+            return
+
+        sit_data = next((s for s in work_data.get('situations', []) if s.get('key') == sit_key), None)
+        if not sit_data:
+            self.chatError.emit("Situation not found.")
+            return
+
+        self.current_work = sit_data
         # Store the key inside work data so StoryStateManager can reference it
-        self.current_work['_key'] = work_key
+        self.current_work['_key'] = sit_key
         self.chat_session = None
         self.story_manager = StoryStateManager(self.current_work)
         
@@ -201,15 +211,30 @@ class BackendBridge(QObject):
         chapter_ended = data.get('_chapter_ended', False)
 
         if ended:
-            self.chatEnded.emit(reply)
+            if isinstance(reply, list):
+                # If story ended, format the narrative paragraph properly
+                self.chatEnded.emit("\n\n".join([msg.get('text', '') for msg in reply]))
+            else:
+                self.chatEnded.emit(str(reply))
         elif chapter_ended:
             # Chapter transition: advance to next chapter
-            self.chatMessageReceived.emit(json.dumps({
-                "sender": self.current_work['character'],
-                "text": reply,
-                "isUser": False,
-                "isSystem": False
-            }))
+            if isinstance(reply, list):
+                for msg in reply:
+                    sender = msg.get('character', self.current_work['character'])
+                    text = msg.get('text', '')
+                    self.chatMessageReceived.emit(json.dumps({
+                        "sender": sender,
+                        "text": text,
+                        "isUser": False,
+                        "isSystem": False
+                    }))
+            else:
+                self.chatMessageReceived.emit(json.dumps({
+                    "sender": self.current_work['character'],
+                    "text": str(reply),
+                    "isUser": False,
+                    "isSystem": False
+                }))
             advanced = self.story_manager.advance_chapter()
             if advanced:
                 next_ch = self.story_manager.current_chapter()
@@ -225,14 +250,29 @@ class BackendBridge(QObject):
                 self.chatOptionsUpdated.emit(json.dumps(options))
             else:
                 # No more chapters — story is over
-                self.chatEnded.emit(reply)
+                if isinstance(reply, list):
+                    self.chatEnded.emit("\n\n".join([msg.get('text', '') for msg in reply]))
+                else:
+                    self.chatEnded.emit(str(reply))
         else:
-            self.chatMessageReceived.emit(json.dumps({
-                "sender": self.current_work['character'],
-                "text": reply,
-                "isUser": False,
-                "isSystem": False
-            }))
+            if isinstance(reply, list):
+                for msg in reply:
+                    sender = msg.get('character', self.current_work['character'])
+                    text = msg.get('text', '')
+                    self.chatMessageReceived.emit(json.dumps({
+                        "sender": sender,
+                        "text": text,
+                        "isUser": False,
+                        "isSystem": False
+                    }))
+            else:
+                self.chatMessageReceived.emit(json.dumps({
+                    "sender": self.current_work['character'],
+                    "text": str(reply),
+                    "isUser": False,
+                    "isSystem": False
+                }))
+            
             self.chatOptionsUpdated.emit(json.dumps(options))
             # Update progress
             if self.story_manager and self.story_manager.has_chapters:

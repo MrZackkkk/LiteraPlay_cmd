@@ -1,6 +1,8 @@
-let backend = null;
+let backend = null; // Global state
 let currentCharacterName = "";
-let currentColor = "#3B82F6";
+let currentUserCharacter = "Ти"; // Default
+let currentColor = "";
+let libraryData = {};
 
 // Initialize QWebChannel
 document.addEventListener("DOMContentLoaded", () => {
@@ -50,6 +52,11 @@ function setupEventListeners() {
         backend.save_api_key_decision(key, true);
     });
 
+    // Situation Screen
+    document.getElementById("btn-sit-back").addEventListener("click", () => {
+        showScreen("menu");
+    });
+
     // Chat Screen
     document.getElementById("btn-back").addEventListener("click", () => {
         showScreen("menu");
@@ -65,6 +72,7 @@ function showScreen(name) {
     document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
     if (name === "api") document.getElementById("api-screen").classList.remove("hidden");
     if (name === "menu") document.getElementById("menu-screen").classList.remove("hidden");
+    if (name === "situation") document.getElementById("situation-screen").classList.remove("hidden");
     if (name === "chat") document.getElementById("chat-screen").classList.remove("hidden");
 }
 
@@ -87,29 +95,68 @@ function renderLibrary(libraryJson) {
     // Transition to Menu if it's the first time
     showScreen("menu");
 
-    const lib = JSON.parse(libraryJson);
+    libraryData = JSON.parse(libraryJson);
     const container = document.getElementById("library-cards-container");
     container.innerHTML = "";
 
-    for (const [key, data] of Object.entries(lib)) {
+    for (const [key, data] of Object.entries(libraryData)) {
         const card = document.createElement("div");
         card.className = "library-card glass-card";
 
         const safeColor = data.color || "var(--accent)";
+        let numSituations = "";
+        if (data.situations && data.situations.length > 0) {
+            numSituations = `Ситуации: ${data.situations.length}`;
+        }
 
         card.innerHTML = `
             <h2>${data.title}</h2>
-            <p class="char-info" style="color: ${safeColor}">Герой: ${data.character}</p>
-            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${key}', '${data.character}', '${safeColor}')">Започни разговор</button>
+            <p class="char-info" style="color: ${safeColor}">${numSituations}</p>
+            <button class="btn-card" style="background-color: ${safeColor}" onclick="showSituations('${key}')">Избери</button>
         `;
         container.appendChild(card);
     }
 }
 
-function startChat(key, charName, color) {
-    currentCharacterName = charName;
-    currentColor = color;
-    document.getElementById("chat-title").innerText = charName;
+function showSituations(workKey) {
+    const workData = libraryData[workKey];
+    if (!workData || !workData.situations) return;
+
+    document.getElementById("situation-title").innerText = workData.title;
+
+    const container = document.getElementById("situation-cards-container");
+    container.innerHTML = "";
+
+    workData.situations.forEach((sit) => {
+        const card = document.createElement("div");
+        card.className = "library-card glass-card";
+
+        const safeColor = sit.color || workData.color || "var(--accent)";
+
+        const charDisplay = sit.characters
+            ? `Герои: ${sit.characters}`
+            : `Герой: ${sit.character}`;
+
+        card.innerHTML = `
+            <h2>${sit.title}</h2>
+            <p class="char-info" style="color: ${safeColor}">${charDisplay}</p>
+            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${workKey}', '${sit.key}')">Започни разговор</button>
+        `;
+        container.appendChild(card);
+    });
+
+    showScreen("situation");
+}
+
+function startChat(workKey, sitKey) {
+    const workData = libraryData[workKey];
+    const sitData = workData.situations.find(s => s.key === sitKey);
+    if (!sitData) return;
+
+    currentCharacterName = sitData.character;
+    currentUserCharacter = sitData.user_character || "Ти";
+    currentColor = sitData.color || workData.color || "var(--accent)";
+    document.getElementById("chat-title").innerText = sitData.character;
 
     document.getElementById("chat-history").innerHTML = "";
     document.getElementById("chat-options").innerHTML = "";
@@ -123,7 +170,7 @@ function startChat(key, charName, color) {
     document.getElementById("chapter-label").innerText = "";
     document.getElementById("progress-bar-fill").style.width = "0%";
 
-    backend.start_chat_session(key);
+    backend.start_chat_session(workKey, sitKey);
 }
 
 function handleChatStarted(intro, firstMessage) {
@@ -161,6 +208,8 @@ function handleChatEnded(finalText) {
 
     setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
 }
+
+// handleStoryTransition is removed because consecutive stories are selected from UI now
 
 function handleChatMessageJson(jsonStr) {
     try {
@@ -205,15 +254,28 @@ function renderChatOptions(optionsJson) {
     }
 
     optionsArray.forEach(opt => {
+        const isCanonical = opt.includes("[Канонично]");
+        const displayText = opt.replace("[Канонично]", "").trim();
+
         const btn = document.createElement("button");
         btn.className = "btn-option";
-        btn.innerText = opt;
-        btn.onmouseover = () => btn.style.borderColor = currentColor;
-        btn.onmouseout = () => btn.style.borderColor = "var(--border)";
+        if (isCanonical) {
+            btn.classList.add("canonical-option");
+            btn.innerHTML = `📖 ${displayText}`;
+        } else {
+            btn.innerText = displayText;
+        }
+
+        btn.onmouseover = () => {
+            if (!isCanonical) btn.style.borderColor = currentColor;
+        };
+        btn.onmouseout = () => {
+            if (!isCanonical) btn.style.borderColor = "var(--border)";
+        };
         btn.onclick = () => {
-            _renderChatMessage("Ти", opt, true, false);
+            _renderChatMessage(currentUserCharacter, displayText, true, false);
             container.innerHTML = ""; // Clear options
-            backend.send_user_message(opt);
+            backend.send_user_message(opt); // Send the full original text to backend!
         };
         container.appendChild(btn);
     });
@@ -225,7 +287,7 @@ function sendInputMsg() {
     if (!text) return;
 
     input.value = "";
-    _renderChatMessage("Ти", text, true, false);
+    _renderChatMessage(currentUserCharacter, text, true, false);
     document.getElementById("chat-options").innerHTML = ""; // Clear options
 
     backend.send_user_message(text);

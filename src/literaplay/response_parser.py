@@ -73,12 +73,17 @@ def validate_story_response(
     result = dict(data)  # shallow copy
 
     # --- reply ---
-    reply = result.get("reply") or ""
-    if not reply.strip():
-        reply = "..."
-    if len(reply) > _MAX_REPLY_CHARS:
-        reply = reply[:_MAX_REPLY_CHARS].rsplit(" ", 1)[0] + "..."
-    result["reply"] = reply
+    reply = result.get("reply")
+    if isinstance(reply, list):
+        if not reply:
+            result["reply"] = [{"character": "System", "text": "..."}]
+    else:
+        reply = reply or ""
+        if not reply.strip():
+            reply = "..."
+        if len(reply) > _MAX_REPLY_CHARS:
+            reply = reply[:_MAX_REPLY_CHARS].rsplit(" ", 1)[0] + "..."
+        result["reply"] = reply
 
     # --- ended ---
     ended = result.get("ended", False)

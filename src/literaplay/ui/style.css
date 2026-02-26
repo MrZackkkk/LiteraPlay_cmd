@@ -56,6 +56,10 @@ body {
     margin-top: 0.5rem;
 }
 
+.mb-4 {
+    margin-bottom: 1rem;
+}
+
 ::-webkit-scrollbar {
     width: 8px;
 }
@@ -444,6 +448,25 @@ button {
     transition: all 0.2s;
 }
 
+.btn-option:hover {
+    background: var(--surface);
+}
+
+.canonical-option {
+    border-color: #F59E0B;
+    /* Amber 500 */
+    color: #FBBF24;
+    /* Amber 400 */
+    background: rgba(245, 158, 11, 0.05);
+    /* Slight amber tint */
+}
+
+.canonical-option:hover {
+    background: rgba(245, 158, 11, 0.15);
+    /* Stronger amber tint on hover */
+    border-color: #FBBF24;
+}
+
 .glass-input {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -457,9 +480,18 @@ button {
     flex: 1;
     background: transparent;
     border: none;
-    color: white;
-    font-size: 16px;
-    outline: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.chat-input-wrapper {
+    display: flex;
+    gap: 15px;
+    border-radius: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .btn-send {
