@@ -1,6 +1,7 @@
-import sys
+import contextlib
 import json
 import logging
+import sys
 import traceback
 from pathlib import Path
 
@@ -9,10 +10,10 @@ _src_dir = Path(__file__).resolve().parent.parent
 if str(_src_dir) not in sys.path:
     sys.path.insert(0, str(_src_dir))
 
-from PySide6.QtWidgets import QApplication, QMainWindow
-from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtCore import QObject, QThread, QUrl, Signal, Slot
 from PySide6.QtWebChannel import QWebChannel
-from PySide6.QtCore import QUrl, QObject, Slot, Signal, QThread
+from PySide6.QtWebEngineWidgets import QWebEngineView
+from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
 from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
@@ -135,10 +136,8 @@ class BackendBridge(QObject):
         self.story_manager = None
 
         if config.API_KEY:
-            try:
+            with contextlib.suppress(Exception):
                 self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
-            except Exception:
-                pass
 
     @Slot()
     def request_initial_state(self):
@@ -206,6 +205,10 @@ class BackendBridge(QObject):
     def send_user_message(self, text):
         if not self.ai_service or not self.chat_session:
             self.chatError.emit("Няма активна сесия.")
+            return
+
+        # Double-send guard: ignore if a worker is already running
+        if self.worker is not None and self.worker.isRunning():
             return
 
         self.loadingStateChanged.emit(True)
@@ -308,8 +311,17 @@ class MainWindow(QMainWindow):
         url = QUrl.fromLocalFile(str(UI_PATH.resolve()))
         self.browser.load(url)
 
+    def closeEvent(self, event):
+        """Ensure running QThread workers are stopped before exit."""
+        for worker in (self.backend.worker, self.backend.api_worker):
+            if worker is not None and worker.isRunning():
+                worker.quit()
+                worker.wait(3000)
+        super().closeEvent(event)
 
-if __name__ == "__main__":
+
+def main():
+    """Application entry point (referenced by pyproject.toml console_scripts)."""
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
@@ -318,3 +330,7 @@ if __name__ == "__main__":
     window = MainWindow()
     window.show()
     sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()

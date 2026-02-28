@@ -1,6 +1,6 @@
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
-build-backend = "setuptools.backends._legacy:_Backend"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "literaplay"
@@ -45,6 +45,10 @@ line-length = 120
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "SIM"]
 ignore = ["E402"]  # Allow imports after sys.path manipulation in main.py
+
+[tool.ruff.lint.per-file-ignores]
+"src/literaplay/data.py" = ["E501"]        # AI prompt strings are intentionally long
+"src/literaplay/ai_service.py" = ["E501"]  # System instruction strings are intentionally long
 
 [tool.ruff.format]
 quote-style = "double"

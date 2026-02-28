@@ -2,7 +2,6 @@ import unittest
 
 from literaplay.story_state import ChapterDef, StoryStateManager
 
-
 _SAMPLE_CHAPTERS = [
     {
         "id": "ch1_test",

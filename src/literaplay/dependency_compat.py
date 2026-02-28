@@ -6,9 +6,9 @@ in environments where optional UI/config packages are not installed.
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from importlib import import_module
 from pathlib import Path
-from typing import Callable
 
 
 def load_dotenv_functions() -> tuple[Callable[[], bool], Callable[[str, str, str], tuple[bool, str, str]]]:
@@ -40,7 +40,8 @@ def _fallback_load_dotenv(dotenv_path: str = ".env") -> bool:
         if key:
             import os
 
-            os.environ.setdefault(key, value)
+            if key not in os.environ or not os.environ[key]:
+                os.environ[key] = value
 
     return True
 

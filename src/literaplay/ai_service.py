@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Callable, Optional
+from collections.abc import Callable
 
 try:
     import google.genai as genai
@@ -85,7 +85,7 @@ class AIService:
             history=[],
         )
 
-    def send_message(self, chat_session, text: str, status_callback: Optional[Callable[[str], None]] = None) -> str:
+    def send_message(self, chat_session, text: str, status_callback: Callable[[str], None] | None = None) -> str:
         """
         Sends a message to the chat session and returns the response text.
         Handles rate limiting (429) with retries.
@@ -121,7 +121,7 @@ class AIService:
         chat_session,
         user_text: str,
         context_injection: str,
-        status_callback: Optional[Callable[[str], None]] = None,
+        status_callback: Callable[[str], None] | None = None,
     ) -> str:
         """Send a message with story-state context prepended.
 

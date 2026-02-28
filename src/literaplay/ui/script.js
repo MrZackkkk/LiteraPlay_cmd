@@ -234,7 +234,7 @@ function _renderChatMessage(sender, text, isUser, isSystem) {
 
     let html = "";
     if (!isSystem) {
-        html += `<span class="sender-name">${sender}</span>`;
+        html += `<span class="sender-name">${sanitizeHtml(sender)}</span>`;
     }
 
     // Convert newlines to breaks (sanitize first to prevent XSS)

@@ -1,4 +1,5 @@
 import os
+
 from literaplay.dependency_compat import load_dotenv_functions
 
 load_dotenv, set_key = load_dotenv_functions()

@@ -32,7 +32,7 @@ Built with **PySide6 / Qt WebEngine** for a modern hybrid UI and backed by the *
 
 ## 🛠 Prerequisites
 
-- **Python 3.10+**
+- **Python 3.11+**
 - A **Google API Key** with access to the Gemini API
 
 ---
