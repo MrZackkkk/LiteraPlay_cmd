@@ -17,11 +17,23 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
 from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
-from literaplay.data import LIBRARY
+from literaplay.data import AVATAR_MAP, LIBRARY
 from literaplay.response_parser import parse_ai_json_response, validate_story_response
 from literaplay.story_state import StoryStateManager
 
 UI_PATH = Path(__file__).parent / "ui" / "index.html"
+
+
+def _build_library_json() -> str:
+    """Build a JSON-serializable copy of LIBRARY with avatar filenames injected."""
+    import copy
+    lib = copy.deepcopy(LIBRARY)
+    for _work_key, work in lib.items():
+        for sit in work.get("situations", []):
+            sit["npc_avatar"] = AVATAR_MAP.get(sit.get("character", ""))
+            sit["user_avatar"] = AVATAR_MAP.get(sit.get("user_character", ""))
+    return json.dumps(lib)
+
 
 # ================== WORKER THREAD ==================
 
@@ -96,6 +108,7 @@ def _format_reply_messages(reply, default_character: str) -> list[dict]:
                 "text": msg.get("text", ""),
                 "isUser": False,
                 "isSystem": False,
+                "avatar": AVATAR_MAP.get(msg.get("character", default_character)),
             }
             for msg in reply
         ]
@@ -105,6 +118,7 @@ def _format_reply_messages(reply, default_character: str) -> list[dict]:
             "text": str(reply),
             "isUser": False,
             "isSystem": False,
+            "avatar": AVATAR_MAP.get(default_character),
         }
     ]
 
@@ -144,7 +158,7 @@ class BackendBridge(QObject):
         """Called by JS when the page finishes loading."""
         if config.API_KEY and self.ai_service:
             # Skip straight to menu
-            self.libraryLoaded.emit(json.dumps(LIBRARY))
+            self.libraryLoaded.emit(_build_library_json())
         else:
             # JS stays on API screen by default
             pass
@@ -168,7 +182,7 @@ class BackendBridge(QObject):
 
         try:
             self.ai_service = AIService(key, config.DEFAULT_MODEL)
-            self.libraryLoaded.emit(json.dumps(LIBRARY))
+            self.libraryLoaded.emit(_build_library_json())
         except Exception as e:
             self.apiValidationResult.emit(False, str(e))
 
@@ -193,7 +207,10 @@ class BackendBridge(QObject):
         if self.ai_service:
             try:
                 self.chat_session = self.ai_service.create_chat(self.current_work["prompt"])
-                self.chatStarted.emit(self.current_work["intro"], self.current_work.get("first_message", "Здравей!"))
+                self.chatStarted.emit(
+                    self.current_work["intro"],
+                    self.current_work.get("first_message", "Здравей!"),
+                )
                 self.chatOptionsUpdated.emit(json.dumps(self.current_work.get("choices", [])))
                 # Emit initial progress
                 if self.story_manager.has_chapters:

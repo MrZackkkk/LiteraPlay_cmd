@@ -368,26 +368,51 @@ button {
 
 .msg-wrapper {
     display: flex;
-    flex-direction: column;
     gap: 6px;
     max-width: 80%;
 }
 
 .msg-wrapper.user {
     align-self: flex-end;
-    align-items: flex-end;
+    flex-direction: row-reverse;
 }
 
 .msg-wrapper.ai {
     align-self: flex-start;
-    align-items: flex-start;
+    flex-direction: row;
 }
 
 .msg-wrapper.system {
     align-self: center;
-    align-items: center;
+    justify-content: center;
     max-width: 90%;
     margin: 10px 0;
+}
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 2px solid rgba(0, 0, 0, 0.4);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    margin-top: 2px;
+}
+
+.msg-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.msg-wrapper.user .msg-content {
+    align-items: flex-end;
+}
+
+.msg-wrapper.ai .msg-content {
+    align-items: flex-start;
 }
 
 .sender-name {

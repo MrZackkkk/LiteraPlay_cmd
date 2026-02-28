@@ -3,6 +3,8 @@ let currentCharacterName = "";
 let currentUserCharacter = "Ти"; // Default
 let currentColor = "";
 let libraryData = {};
+let currentNpcAvatar = null;
+let currentUserAvatar = null;
 
 /** Escape HTML special characters to prevent XSS. */
 function sanitizeHtml(text) {
@@ -163,6 +165,8 @@ function startChat(workKey, sitKey) {
     currentCharacterName = sitData.character;
     currentUserCharacter = sitData.user_character || "Ти";
     currentColor = sitData.color || workData.color || "var(--accent)";
+    currentNpcAvatar = sitData.npc_avatar || null;
+    currentUserAvatar = sitData.user_avatar || null;
     document.getElementById("chat-title").innerText = sitData.character;
 
     document.getElementById("chat-history").innerHTML = "";
@@ -181,13 +185,13 @@ function startChat(workKey, sitKey) {
 }
 
 function handleChatStarted(intro, firstMessage) {
-    _renderChatMessage("System", intro, false, true);
-    _renderChatMessage(currentCharacterName, firstMessage, false, false);
+    _renderChatMessage("System", intro, false, true, null);
+    _renderChatMessage(currentCharacterName, firstMessage, false, false, currentNpcAvatar);
 }
 
 function handleChatEnded(finalText) {
     // Render the final narrative as a system message
-    _renderChatMessage("System", "\n" + finalText, false, true);
+    _renderChatMessage("System", "\n" + finalText, false, true, null);
 
     // Hide options and input area
     document.getElementById("chat-options").innerHTML = "";
@@ -221,26 +225,44 @@ function handleChatEnded(finalText) {
 function handleChatMessageJson(jsonStr) {
     try {
         const data = JSON.parse(jsonStr);
-        _renderChatMessage(data.sender, data.text, data.isUser, data.isSystem);
+        _renderChatMessage(data.sender, data.text, data.isUser, data.isSystem, data.avatar || null);
     } catch (e) {
         console.error("Failed to parse chat message JSON:", e);
     }
 }
 
-function _renderChatMessage(sender, text, isUser, isSystem) {
+function _renderChatMessage(sender, text, isUser, isSystem, avatar) {
     const history = document.getElementById("chat-history");
     const wrapper = document.createElement("div");
     wrapper.className = `msg-wrapper ${isSystem ? 'system' : (isUser ? 'user' : 'ai')}`;
 
     let html = "";
+
+    // Resolve avatar: use provided avatar, or fall back to globals
+    let resolvedAvatar = avatar;
+    if (!resolvedAvatar && !isSystem) {
+        resolvedAvatar = isUser ? currentUserAvatar : currentNpcAvatar;
+    }
+
+    if (!isSystem && resolvedAvatar) {
+        html += `<img class="avatar" src="avatars/${resolvedAvatar}" alt="${sanitizeHtml(sender)}" />`;
+    }
+
+    const msgContent = document.createElement("div");
+    msgContent.className = "msg-content";
+
+    let contentHtml = "";
     if (!isSystem) {
-        html += `<span class="sender-name">${sanitizeHtml(sender)}</span>`;
+        contentHtml += `<span class="sender-name">${sanitizeHtml(sender)}</span>`;
     }
 
     // Convert newlines to breaks (sanitize first to prevent XSS)
     const safeText = sanitizeHtml(text);
     const formattedText = safeText.replace(/\n/g, '<br>');
-    html += `<div class="bubble">${formattedText}</div>`;
+    contentHtml += `<div class="bubble">${formattedText}</div>`;
+
+    msgContent.innerHTML = contentHtml;
+    html += msgContent.outerHTML;
 
     wrapper.innerHTML = html;
     history.appendChild(wrapper);
@@ -281,7 +303,7 @@ function renderChatOptions(optionsJson) {
             if (!isCanonical) btn.style.borderColor = "var(--border)";
         };
         btn.onclick = () => {
-            _renderChatMessage(currentUserCharacter, displayText, true, false);
+            _renderChatMessage(currentUserCharacter, displayText, true, false, currentUserAvatar);
             container.innerHTML = ""; // Clear options
             backend.send_user_message(opt); // Send the full original text to backend!
         };
@@ -295,7 +317,7 @@ function sendInputMsg() {
     if (!text) return;
 
     input.value = "";
-    _renderChatMessage(currentUserCharacter, text, true, false);
+    _renderChatMessage(currentUserCharacter, text, true, false, currentUserAvatar);
     document.getElementById("chat-options").innerHTML = ""; // Clear options
 
     backend.send_user_message(text);

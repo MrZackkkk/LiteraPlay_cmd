@@ -26,6 +26,21 @@ Rules:
 8. **CANONICAL OPTION**: One of the options MUST always be the canonical choice — i.e. what the protagonist actually does in the original novel at this point in the story. Mark it with the prefix `[Канонично]`. Example: `"[Канонично] (Притаи се зад чувалите — не мърдай)"`. The other options should be creative alternatives that deviate from the book.
 """
 
+AVATAR_MAP = {
+    "Бай Марко": "bay_marko.png",
+    "Дядо Стоян": "dyado_stoyan.png",
+    "Иван Краличът": "ivan_kralichat.png",
+    "Странджата (Знаменосеца)": "strandjata.png",
+    "Странджата (умиращ)": "strandjata.png",
+    "Македонски (Желю хайдутина)": "makedonski.png",
+    "Бръчков": "brachkov.png",
+    "Ирина": "irina.png",
+    "Ирина (последна среща)": "irina.png",
+    "Шаренков (Динко)": "sharenkov.png",
+    "Борис Морев": "boris_morev.png",
+    "Разказвач": "razkazvach.png",
+}
+
 LIBRARY = {
     "pod_igoto": {
         "title": "Под игото",
