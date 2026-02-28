@@ -35,6 +35,7 @@ LIBRARY = {
                 "key": "pod_igoto_sit1",
                 "title": "Гост (Глава I) — Среща в обора",
                 "character": "Бай Марко",
+                "user_character": "Иван Краличът",
                 "characters": "Бай Марко, Иван Краличът (ти)",
                 "color": "#DC2626",
                 "intro": (

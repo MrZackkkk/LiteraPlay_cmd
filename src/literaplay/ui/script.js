@@ -261,6 +261,13 @@ function startChat(workKey, sitKey) {
     document.getElementById("chat-options").innerHTML = "";
     document.getElementById("api-status").innerText = ""; // reset status
 
+    // Force hide typing indicator at the start
+    const typingInd = document.getElementById("typing-indicator");
+    if (typingInd) {
+        typingInd.classList.add("hidden");
+        typingInd.style.display = "none";
+    }
+
     showScreen("chat");
 
     // Reset progress bar
@@ -381,73 +388,6 @@ function renderChatOptions(optionsJson) {
             if (!isCanonical) btn.style.borderColor = "var(--border)";
         };
         btn.onclick = () => {
-            // Handle click logic...
-        };
-    });
-}
-
-function _renderChatMessage(sender, text, isUser, isSystem) {
-    const history = document.getElementById("chat-history");
-    const wrapper = document.createElement("div");
-    wrapper.className = `msg-wrapper ${isSystem ? 'system' : (isUser ? 'user' : 'ai')}`;
-
-    let html = "";
-
-    const msgContent = document.createElement("div");
-    msgContent.className = "msg-content";
-
-    let contentHtml = "";
-    if (!isSystem) {
-        contentHtml += `<span class="sender-name">${sanitizeHtml(sender)}</span>`;
-    }
-
-    // Convert newlines to breaks (sanitize first to prevent XSS)
-    const safeText = sanitizeHtml(text);
-    const formattedText = safeText.replace(/\n/g, '<br>');
-    contentHtml += `<div class="bubble">${formattedText}</div>`;
-
-    msgContent.innerHTML = contentHtml;
-    html += msgContent.outerHTML;
-
-    wrapper.innerHTML = html;
-    history.appendChild(wrapper);
-
-    // Scroll to bottom
-    setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
-}
-
-function renderChatOptions(optionsJson) {
-    const container = document.getElementById("chat-options");
-    container.innerHTML = "";
-
-    let optionsArray = [];
-    try {
-        optionsArray = JSON.parse(optionsJson);
-    } catch (e) {
-        console.error("Failed to parse chat options:", e);
-        return;
-    }
-
-    optionsArray.forEach(opt => {
-        const isCanonical = opt.includes("[Канонично]");
-        const displayText = opt.replace("[Канонично]", "").trim();
-
-        const btn = document.createElement("button");
-        btn.className = "btn-option";
-        if (isCanonical) {
-            btn.classList.add("canonical-option");
-            btn.innerHTML = `📖 ${displayText}`;
-        } else {
-            btn.innerText = displayText;
-        }
-
-        btn.onmouseover = () => {
-            if (!isCanonical) btn.style.borderColor = currentColor;
-        };
-        btn.onmouseout = () => {
-            if (!isCanonical) btn.style.borderColor = "var(--border)";
-        };
-        btn.onclick = () => {
             _renderChatMessage(currentUserCharacter, displayText, true, false);
             container.innerHTML = ""; // Clear options
             backend.send_user_message(opt); // Send the full original text to backend!
@@ -475,10 +415,12 @@ function toggleLoading(isLoading) {
 
     if (isLoading) {
         ind.classList.remove("hidden");
+        ind.style.display = "block";
         input.disabled = true;
         btn.disabled = true;
     } else {
         ind.classList.add("hidden");
+        ind.style.display = "none";
         input.disabled = false;
         btn.disabled = false;
         input.focus();
