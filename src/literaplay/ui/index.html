@@ -76,25 +76,27 @@
 
     <!-- ================== SCREEN 2A: SETTINGS ================== -->
     <div id="settings-screen" class="screen hidden layout-column">
-        <header class="menu-header">
+        <header class="menu-header" style="padding-bottom: 0;">
             <button id="btn-close-settings" class="btn-icon mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
                 <span>Назад</span>
             </button>
-            <span class="badge">✦ LITERAPLAY CONFIG</span>
-            <h1 class="main-title">Настройки</h1>
+            <div style="margin-top: 16px;">
+                <span class="badge">✦ LITERAPLAY CONFIG</span>
+                <h1 class="main-title">Настройки</h1>
+            </div>
         </header>
 
         <main class="settings-grid">
-            <div class="glass-card settings-card">
+            <div class="settings-card">
                 <h2>AI Модел</h2>
-                <p class="subtitle">Избери кой Gemini модел да генерира историята.</p>
+                <p class="subtitle mb-4">Избери кой Gemini модел да генерира историята.</p>
 
-                <div class="input-group">
+                <div class="input-group" style="margin-top: 16px;">
                     <input type="hidden" id="model-picker" value="gemini-3-flash-preview">
                     <div class="custom-select" id="custom-model-select">
                         <div class="select-selected">gemini-3-flash-preview (Подразбиране)</div>
@@ -108,9 +110,10 @@
                     </div>
                 </div>
 
-                <div class="action-row">
+                <div class="action-row" style="margin-top: auto; padding-top: 24px;">
                     <p id="settings-status"></p>
-                    <button id="btn-save-settings" class="btn-primary">Запази</button>
+                    <button id="btn-save-settings" class="btn-primary"
+                        style="border-radius: 12px; padding: 12px 24px;">Запази промените</button>
                 </div>
             </div>
         </main>
@@ -118,18 +121,20 @@
 
     <!-- ================== SCREEN 2B: SITUATION SELECT ================== -->
     <div id="situation-screen" class="screen hidden layout-column">
-        <header class="menu-header">
+        <header class="menu-header" style="padding-bottom: 0;">
             <button id="btn-sit-back" class="btn-icon mb-4">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
                     <polyline points="12 19 5 12 12 5"></polyline>
                 </svg>
                 <span>Назад</span>
             </button>
-            <span class="badge">✦ LITERAPLAY SELECT</span>
-            <h1 class="main-title" id="situation-title">Избери ситуация</h1>
-            <p class="subtitle mt-2" id="situation-subtitle">Продължи приключението с избрания герой.</p>
+            <div style="margin-top: 16px;">
+                <span class="badge">✦ LITERAPLAY SELECT</span>
+                <h1 class="main-title" id="situation-title">Избери ситуация</h1>
+                <p class="subtitle mt-2" id="situation-subtitle">Продължи приключението с избрания герой.</p>
+            </div>
         </header>
 
         <main class="cards-grid" id="situation-cards-container">

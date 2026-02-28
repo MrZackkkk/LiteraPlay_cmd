@@ -1,10 +1,9 @@
 let backend = null; // Global state
 let currentCharacterName = "";
-let currentUserCharacter = "Ти"; // Default
+let currentUserCharacter = "Анонимен"; // Default
 let currentColor = "";
 let libraryData = {};
-let currentNpcAvatar = null;
-let currentUserAvatar = null;
+
 
 /** Escape HTML special characters to prevent XSS. */
 function sanitizeHtml(text) {
@@ -102,6 +101,50 @@ function setupEventListeners() {
     document.getElementById("chat-input").addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendInputMsg();
     });
+
+    setupCustomSelect();
+}
+
+function setupCustomSelect() {
+    const selected = document.querySelector(".select-selected");
+    const items = document.querySelector(".select-items");
+    const hiddenInput = document.getElementById("model-picker");
+
+    if (!selected || !items || !hiddenInput) return;
+
+    selected.addEventListener("click", function (e) {
+        e.stopPropagation();
+        this.classList.toggle("select-arrow-active");
+        items.classList.toggle("select-hide");
+    });
+
+    const options = items.querySelectorAll("div");
+    options.forEach(option => {
+        option.addEventListener("click", function (e) {
+            e.stopPropagation();
+            // Update hidden input
+            hiddenInput.value = this.getAttribute("data-value");
+
+            // Update UI text
+            selected.innerHTML = this.innerHTML;
+
+            // Update selected class
+            options.forEach(opt => opt.classList.remove("same-as-selected"));
+            this.classList.add("same-as-selected");
+
+            // Close dropdown
+            selected.classList.remove("select-arrow-active");
+            items.classList.add("select-hide");
+        });
+    });
+
+    // Close the dropdown if the user clicks anywhere outside of it
+    document.addEventListener("click", function (e) {
+        if (e.target !== selected && e.target !== items) {
+            selected.classList.remove("select-arrow-active");
+            items.classList.add("select-hide");
+        }
+    });
 }
 
 function showScreen(name) {
@@ -129,9 +172,21 @@ function handleApiValidation(isValid, message) {
 }
 
 function handleCurrentModel(modelName) {
-    const picker = document.getElementById("model-picker");
-    if (picker) {
-        picker.value = modelName;
+    const hiddenInput = document.getElementById("model-picker");
+    if (hiddenInput) {
+        hiddenInput.value = modelName;
+
+        // Update custom UI if present
+        const items = document.querySelectorAll(".select-items div");
+        const selected = document.querySelector(".select-selected");
+
+        items.forEach(item => {
+            if (item.getAttribute("data-value") === modelName) {
+                selected.innerHTML = item.innerHTML;
+                items.forEach(opt => opt.classList.remove("same-as-selected"));
+                item.classList.add("same-as-selected");
+            }
+        });
     }
 }
 
@@ -198,10 +253,8 @@ function startChat(workKey, sitKey) {
     if (!sitData) return;
 
     currentCharacterName = sitData.character;
-    currentUserCharacter = sitData.user_character || "Ти";
+    currentUserCharacter = sitData.user_character || "Анонимен";
     currentColor = sitData.color || workData.color || "var(--accent)";
-    currentNpcAvatar = sitData.npc_avatar || null;
-    currentUserAvatar = sitData.user_avatar || null;
     document.getElementById("chat-title").innerText = sitData.character;
 
     document.getElementById("chat-history").innerHTML = "";
@@ -220,13 +273,13 @@ function startChat(workKey, sitKey) {
 }
 
 function handleChatStarted(intro, firstMessage) {
-    _renderChatMessage("System", intro, false, true, null);
-    _renderChatMessage(currentCharacterName, firstMessage, false, false, currentNpcAvatar);
+    _renderChatMessage("System", intro, false, true);
+    _renderChatMessage(currentCharacterName, firstMessage, false, false);
 }
 
 function handleChatEnded(finalText) {
     // Render the final narrative as a system message
-    _renderChatMessage("System", "\n" + finalText, false, true, null);
+    _renderChatMessage("System", "\n" + finalText, false, true);
 
     // Hide options and input area
     document.getElementById("chat-options").innerHTML = "";
@@ -260,28 +313,18 @@ function handleChatEnded(finalText) {
 function handleChatMessageJson(jsonStr) {
     try {
         const data = JSON.parse(jsonStr);
-        _renderChatMessage(data.sender, data.text, data.isUser, data.isSystem, data.avatar || null);
+        _renderChatMessage(data.sender, data.text, data.isUser, data.isSystem);
     } catch (e) {
         console.error("Failed to parse chat message JSON:", e);
     }
 }
 
-function _renderChatMessage(sender, text, isUser, isSystem, avatar) {
+function _renderChatMessage(sender, text, isUser, isSystem) {
     const history = document.getElementById("chat-history");
     const wrapper = document.createElement("div");
     wrapper.className = `msg-wrapper ${isSystem ? 'system' : (isUser ? 'user' : 'ai')}`;
 
     let html = "";
-
-    // Resolve avatar: use provided avatar, or fall back to globals
-    let resolvedAvatar = avatar;
-    if (!resolvedAvatar && !isSystem) {
-        resolvedAvatar = isUser ? currentUserAvatar : currentNpcAvatar;
-    }
-
-    if (!isSystem && resolvedAvatar) {
-        html += `<img class="avatar" src="avatars/${resolvedAvatar}" alt="${sanitizeHtml(sender)}" />`;
-    }
 
     const msgContent = document.createElement("div");
     msgContent.className = "msg-content";
@@ -338,7 +381,74 @@ function renderChatOptions(optionsJson) {
             if (!isCanonical) btn.style.borderColor = "var(--border)";
         };
         btn.onclick = () => {
-            _renderChatMessage(currentUserCharacter, displayText, true, false, currentUserAvatar);
+            // Handle click logic...
+        };
+    });
+}
+
+function _renderChatMessage(sender, text, isUser, isSystem) {
+    const history = document.getElementById("chat-history");
+    const wrapper = document.createElement("div");
+    wrapper.className = `msg-wrapper ${isSystem ? 'system' : (isUser ? 'user' : 'ai')}`;
+
+    let html = "";
+
+    const msgContent = document.createElement("div");
+    msgContent.className = "msg-content";
+
+    let contentHtml = "";
+    if (!isSystem) {
+        contentHtml += `<span class="sender-name">${sanitizeHtml(sender)}</span>`;
+    }
+
+    // Convert newlines to breaks (sanitize first to prevent XSS)
+    const safeText = sanitizeHtml(text);
+    const formattedText = safeText.replace(/\n/g, '<br>');
+    contentHtml += `<div class="bubble">${formattedText}</div>`;
+
+    msgContent.innerHTML = contentHtml;
+    html += msgContent.outerHTML;
+
+    wrapper.innerHTML = html;
+    history.appendChild(wrapper);
+
+    // Scroll to bottom
+    setTimeout(() => { history.scrollTop = history.scrollHeight; }, 50);
+}
+
+function renderChatOptions(optionsJson) {
+    const container = document.getElementById("chat-options");
+    container.innerHTML = "";
+
+    let optionsArray = [];
+    try {
+        optionsArray = JSON.parse(optionsJson);
+    } catch (e) {
+        console.error("Failed to parse chat options:", e);
+        return;
+    }
+
+    optionsArray.forEach(opt => {
+        const isCanonical = opt.includes("[Канонично]");
+        const displayText = opt.replace("[Канонично]", "").trim();
+
+        const btn = document.createElement("button");
+        btn.className = "btn-option";
+        if (isCanonical) {
+            btn.classList.add("canonical-option");
+            btn.innerHTML = `📖 ${displayText}`;
+        } else {
+            btn.innerText = displayText;
+        }
+
+        btn.onmouseover = () => {
+            if (!isCanonical) btn.style.borderColor = currentColor;
+        };
+        btn.onmouseout = () => {
+            if (!isCanonical) btn.style.borderColor = "var(--border)";
+        };
+        btn.onclick = () => {
+            _renderChatMessage(currentUserCharacter, displayText, true, false);
             container.innerHTML = ""; // Clear options
             backend.send_user_message(opt); // Send the full original text to backend!
         };
@@ -352,7 +462,7 @@ function sendInputMsg() {
     if (!text) return;
 
     input.value = "";
-    _renderChatMessage(currentUserCharacter, text, true, false, currentUserAvatar);
+    _renderChatMessage(currentUserCharacter, text, true, false);
     document.getElementById("chat-options").innerHTML = ""; // Clear options
 
     backend.send_user_message(text);

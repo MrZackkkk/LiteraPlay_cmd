@@ -57,6 +57,31 @@ class TestSaveApiKey(unittest.TestCase):
         with self.assertRaises(ValueError):
             save_api_key("   ")
 
+    def test_save_model_name_writes_to_env_file(self):
+        from literaplay.config import save_model_name
+
+        tmp_env = Path("test_env_model_tmp.env")
+        try:
+            save_model_name("gemini-2.5-flash", dotenv_path=str(tmp_env))
+
+            content = tmp_env.read_text(encoding="utf-8")
+            self.assertIn("LITERAPLAY_MODEL", content)
+            self.assertIn("gemini-2.5-flash", content)
+
+            from literaplay import config
+            self.assertEqual(config.DEFAULT_MODEL, "gemini-2.5-flash")
+            self.assertEqual(os.environ.get("LITERAPLAY_MODEL"), "gemini-2.5-flash")
+        finally:
+            if tmp_env.exists():
+                tmp_env.unlink()
+            os.environ.pop("LITERAPLAY_MODEL", None)
+
+    def test_save_model_name_rejects_empty(self):
+        from literaplay.config import save_model_name
+
+        with self.assertRaises(ValueError):
+            save_model_name("")
+
 
 if __name__ == "__main__":
     unittest.main()

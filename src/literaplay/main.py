@@ -17,7 +17,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
 from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
-from literaplay.data import AVATAR_MAP, LIBRARY
+from literaplay.data import LIBRARY
 from literaplay.response_parser import parse_ai_json_response, validate_story_response
 from literaplay.story_state import StoryStateManager
 
@@ -25,13 +25,14 @@ UI_PATH = Path(__file__).parent / "ui" / "index.html"
 
 
 def _build_library_json() -> str:
-    """Build a JSON-serializable copy of LIBRARY with avatar filenames injected."""
+    """Build a JSON-serializable copy of LIBRARY."""
     import copy
     lib = copy.deepcopy(LIBRARY)
     for _work_key, work in lib.items():
         for sit in work.get("situations", []):
-            sit["npc_avatar"] = AVATAR_MAP.get(sit.get("character", ""))
-            sit["user_avatar"] = AVATAR_MAP.get(sit.get("user_character", ""))
+            # Ensure user_character is set if not present
+            if "user_character" not in sit:
+                sit["user_character"] = "Разказвач"
     return json.dumps(lib)
 
 
@@ -102,25 +103,25 @@ class APIVerifyWorker(QThread):
 def _format_reply_messages(reply, default_character: str) -> list[dict]:
     """Normalise a reply (list-of-dicts or plain string) into message dicts."""
     if isinstance(reply, list):
-        return [
-            {
+        results = []
+        for msg in reply:
+            results.append({
                 "sender": msg.get("character", default_character),
                 "text": msg.get("text", ""),
+                "isUser": msg.get("type", "npc") == "user",
+                "isSystem": msg.get("type", "npc") == "system"
+            })
+        return results
+    else:
+        final_reply_text = str(reply)
+        return [
+            {
+                "sender": default_character,
+                "text": final_reply_text,
                 "isUser": False,
-                "isSystem": False,
-                "avatar": AVATAR_MAP.get(msg.get("character", default_character)),
+                "isSystem": False
             }
-            for msg in reply
         ]
-    return [
-        {
-            "sender": default_character,
-            "text": str(reply),
-            "isUser": False,
-            "isSystem": False,
-            "avatar": AVATAR_MAP.get(default_character),
-        }
-    ]
 
 
 class BackendBridge(QObject):
