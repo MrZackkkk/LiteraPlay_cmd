@@ -38,22 +38,22 @@ LIBRARY = {
                 "characters": "Бай Марко, Иван Краличът (ти)",
                 "color": "#DC2626",
                 "intro": (
-            "Пролетта на 1876 година. Нощта е бурна — гръмотевици раздират небето "
-            "над Бяла черкова, дъждът лее като из ведро. В тъмнината селският "
-            "пазач вика часовете, а кучетата на чорбаджи Марко лаят неспирно. "
-            "Стопанинът не спи — напоследък времената са лоши, Турската империя "
-            "стяга хватката, а слухове за бунтовници обикалят из из цяла Западна "
-            "Тракия. Шум от обора кара Марко да грабне пищова, да запали фенера "
-            "и да излезе в нощта, сърцето му свито от тревога..."
-        ),
-        "first_message": "Давранма! Кой е?!",
-        "choices": [
-            "Бай Марко... аз съм... (прошепни слабо)",
-            "Не гърми, чорбаджи! Свой човек съм!",
-            "(Мълчи — притаиш се в сеното и не мърдай)",
-            "[Канонично] Марко… синът на Манол Краличът… пусни ме…"
-        ],
-        "prompt": f"""
+                    "Пролетта на 1876 година. Нощта е бурна — гръмотевици раздират небето "
+                    "над Бяла черкова, дъждът лее като из ведро. В тъмнината селският "
+                    "пазач вика часовете, а кучетата на чорбаджи Марко лаят неспирно. "
+                    "Стопанинът не спи — напоследък времената са лоши, Турската империя "
+                    "стяга хватката, а слухове за бунтовници обикалят из из цяла Западна "
+                    "Тракия. Шум от обора кара Марко да грабне пищова, да запали фенера "
+                    "и да излезе в нощта, сърцето му свито от тревога..."
+                ),
+                "first_message": "Давранма! Кой е?!",
+                "choices": [
+                    "Бай Марко... аз съм... (прошепни слабо)",
+                    "Не гърми, чорбаджи! Свой човек съм!",
+                    "(Мълчи — притаиш се в сеното и не мърдай)",
+                    "[Канонично] Марко… синът на Манол Краличът… пусни ме…",
+                ],
+                "prompt": f"""
 {COMMON_RULES}
 
 # SCENARIO: "ПОД ИГОТО" — Глава I: „Гост"
@@ -217,23 +217,22 @@ Do NOT end the story while Бай Марко is still present and talking.
 You have just shouted into the darkness of the barn: "Давранма! Кой е?!"
 Your пищов is raised. Your heart pounds. Wait for the user's response.
 """,
-        "chapters": [
-            {
-                "id": "ch1_barn_encounter",
-                "title": "Гост (Глава I) — Среща в обора",
-                "setting": "Оборът на Бай Марко, бурна нощ, пролет 1876",
-                "character_mood": "подозрителен, тревожен, въоръжен с пищов",
-                "plot_summary": (
-                    "Бай Марко открива непознат в обора си. Трябва да разбере "
-                    "кой е. Ако се убеди че е Иван Краличът — приема го, дава "
-                    "му храна и завивка, но го оставя в обора."
-                ),
-                "end_condition": (
-                    "Бай Марко тръгва към къщата да успокои семейството, "
-                    "Иван остава сам в обора."
-                ),
-                "max_turns": 20,
-            }
+                "chapters": [
+                    {
+                        "id": "ch1_barn_encounter",
+                        "title": "Гост (Глава I) — Среща в обора",
+                        "setting": "Оборът на Бай Марко, бурна нощ, пролет 1876",
+                        "character_mood": "подозрителен, тревожен, въоръжен с пищов",
+                        "plot_summary": (
+                            "Бай Марко открива непознат в обора си. Трябва да разбере "
+                            "кой е. Ако се убеди че е Иван Краличът — приема го, дава "
+                            "му храна и завивка, но го оставя в обора."
+                        ),
+                        "end_condition": (
+                            "Бай Марко тръгва към къщата да успокои семейството, Иван остава сам в обора."
+                        ),
+                        "max_turns": 20,
+                    }
                 ],
                 "max_turns_per_chapter": 20,
             },
@@ -260,7 +259,7 @@ Your пищов is raised. Your heart pounds. Wait for the user's response.
                     "[Канонично] (Притаи се зад чувалите и не мърдай)",
                     "(Излез от скривалището и се покажи на стареца)",
                     "(Потърси брадвата под лавицата — за всеки случай)",
-                    "(Опитай се да се измъкнеш навън незабелязано)"
+                    "(Опитай се да се измъкнеш навън незабелязано)",
                 ],
                 "prompt": f"""
 {COMMON_RULES}
@@ -449,28 +448,27 @@ Say your first line: "Виж, вятърът е отворил вратата."
 Then tell Марийка to go lie down. Begin your routine in the mill.
 Wait for the user's response.
 """,
-        "chapters": [
-            {
-                "id": "ch1_watermill_hiding",
-                "title": "Бурята (Глава II) — Воденицата",
-                "setting": "Самотна воденица край реката, след бурята, лунна нощ",
-                "character_mood": "спокоен, рутинен, после уплашен до смърт",
-                "plot_summary": (
-                    "Дядо Стоян пристига с Марийка във воденицата. "
-                    "Краличът е скрит вътре. Двамата може да се срещнат. "
-                    "После пристигат Емексиз Пехливан и Топал Хасан и "
-                    "заплашват воденичаря и дъщеря му."
-                ),
-                "end_condition": (
-                    "Краличът убива бандитите, спасява воденичаря и "
-                    "Марийка, и тримата тръгват към манастира."
-                ),
-                "max_turns": 25,
-            },
+                "chapters": [
+                    {
+                        "id": "ch1_watermill_hiding",
+                        "title": "Бурята (Глава II) — Воденицата",
+                        "setting": "Самотна воденица край реката, след бурята, лунна нощ",
+                        "character_mood": "спокоен, рутинен, после уплашен до смърт",
+                        "plot_summary": (
+                            "Дядо Стоян пристига с Марийка във воденицата. "
+                            "Краличът е скрит вътре. Двамата може да се срещнат. "
+                            "После пристигат Емексиз Пехливан и Топал Хасан и "
+                            "заплашват воденичаря и дъщеря му."
+                        ),
+                        "end_condition": (
+                            "Краличът убива бандитите, спасява воденичаря и Марийка, и тримата тръгват към манастира."
+                        ),
+                        "max_turns": 25,
+                    },
                 ],
                 "max_turns_per_chapter": 25,
-            }
-        ]
+            },
+        ],
     },
     "nemili": {
         "title": "Немили-недраги",
@@ -498,7 +496,7 @@ Wait for the user's response.
                 "choices": [
                     "[Канонично] (С мълчаливо възхищение към стария хъш)",
                     "Защо се карате, братя? Не сме ли тук всички българи?!",
-                    "(Извикай) Да живей храбрият Странджа!"
+                    "(Извикай) Да живей храбрият Странджа!",
                 ],
                 "prompt": f"""
 {COMMON_RULES}
@@ -538,15 +536,25 @@ When this happens:
 2. Write a short narrative reply describing how the tavern echoes with "Да живей България!", the men raise you on their shoulders, and Brachkov finally feels he belongs to something great.
 3. Set `"options": []`.
 """,
-                "chapters": [{"id": "sit1", "title": "", "setting": "", "character_mood": "", "plot_summary": "", "end_condition": "", "max_turns": 15}],
-                "max_turns_per_chapter": 15
+                "chapters": [
+                    {
+                        "id": "sit1",
+                        "title": "",
+                        "setting": "",
+                        "character_mood": "",
+                        "plot_summary": "",
+                        "end_condition": "",
+                        "max_turns": 15,
+                    }
+                ],
+                "max_turns_per_chapter": 15,
             },
             {
                 "key": "nemili_sit2",
                 "title": "Глава IV — Изгубена Станка",
                 "character": "Македонски (Желю хайдутина)",
                 "user_character": "Бръчков (Станка)",
-                "color": "#EC4899", # Pink 500
+                "color": "#EC4899",  # Pink 500
                 "characters": "Македонски (Желю хайдутина), Владиков, Мравката, Хаджият, Бръчков / Станка (ти)",
                 "intro": (
                     "Театралното представление 'Изгубена Станка' тече с пълна сила! "
@@ -562,7 +570,7 @@ When this happens:
                 "choices": [
                     "Олеле, спасете ме, бай Желю!",
                     "[Канонично] (Отстъпи уплашено към 'гората', докато Македонски гърми навсякъде и стои ням като истукан)",
-                    "Стой, Желю! Забрави си репликата!"
+                    "Стой, Желю! Забрави си репликата!",
                 ],
                 "prompt": f"""
 {COMMON_RULES}
@@ -603,15 +611,25 @@ When this happens:
 2. Write a short narrative describing the thick smoke, the coughing audience, the mad cheering, and how Македонски stands triumphant, breathing heavily, entirely pleased with himself despite ruining the script.
 3. Set `"options": []`.
 """,
-                "chapters": [{"id": "sit2", "title": "", "setting": "", "character_mood": "", "plot_summary": "", "end_condition": "", "max_turns": 12}],
-                "max_turns_per_chapter": 12
+                "chapters": [
+                    {
+                        "id": "sit2",
+                        "title": "",
+                        "setting": "",
+                        "character_mood": "",
+                        "plot_summary": "",
+                        "end_condition": "",
+                        "max_turns": 12,
+                    }
+                ],
+                "max_turns_per_chapter": 12,
             },
             {
                 "key": "nemili_sit3",
                 "title": "Глава V — Смъртта на Знаменосеца",
                 "character": "Странджата (умиращ)",
                 "user_character": "Бръчков",
-                "color": "#475569", # Slate 600
+                "color": "#475569",  # Slate 600
                 "characters": "Странджата (умиращ), Бръчков (ти)",
                 "intro": (
                     "Две седмици по-късно. Кръчмата е запустяла, студена и покрита с "
@@ -626,7 +644,7 @@ When this happens:
                 "choices": [
                     "Недей, Странджа, ще се оправиш!",
                     "Твоето име ще остане славно. България няма да те забрави.",
-                    "[Канонично] Не се вълнувай! Бъди спокоен, моля те!"
+                    "[Канонично] Не се вълнувай! Бъди спокоен, моля те!",
                 ],
                 "prompt": f"""
 {COMMON_RULES}
@@ -656,10 +674,20 @@ When this happens:
 2. Write a solemn narrative paragraph describing your passing a few days later, Brachkov closing your eyes, and how he was the only one who followed the heroic standard-bearer to his solitary, unmarked grave.
 3. Set `"options": []`.
 """,
-                "chapters": [{"id": "sit3", "title": "", "setting": "", "character_mood": "", "plot_summary": "", "end_condition": "", "max_turns": 12}],
-                "max_turns_per_chapter": 12
-            }
-        ]
+                "chapters": [
+                    {
+                        "id": "sit3",
+                        "title": "",
+                        "setting": "",
+                        "character_mood": "",
+                        "plot_summary": "",
+                        "end_condition": "",
+                        "max_turns": 12,
+                    }
+                ],
+                "max_turns_per_chapter": 12,
+            },
+        ],
     },
     "tyutyun": {
         "title": "Тютюн",
@@ -674,8 +702,8 @@ When this happens:
                 "intro": "В салона на Никотиана...",
                 "first_message": "Здравейте.",
                 "choices": [],
-                "prompt": f"{COMMON_RULES}\nYou are Irina.\n"
+                "prompt": f"{COMMON_RULES}\nYou are Irina.\n",
             }
-        ]
-    }
+        ],
+    },
 }

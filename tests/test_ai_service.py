@@ -32,11 +32,11 @@ class TestAIService(unittest.TestCase):
         # Verify GenerateContentConfig was called with correct parameters
         mock_config_cls.assert_called_once()
         _, kwargs = mock_config_cls.call_args
-        self.assertEqual(kwargs['temperature'], 0.2)
-        self.assertEqual(kwargs['top_p'], 0.95)
-        self.assertEqual(kwargs['top_k'], 40)
-        self.assertIn("System Prompt", kwargs['system_instruction'])
-        self.assertIn("STRICT GUIDELINES", kwargs['system_instruction'])
+        self.assertEqual(kwargs["temperature"], 0.2)
+        self.assertEqual(kwargs["top_p"], 0.95)
+        self.assertEqual(kwargs["top_k"], 40)
+        self.assertIn("System Prompt", kwargs["system_instruction"])
+        self.assertIn("STRICT GUIDELINES", kwargs["system_instruction"])
 
         # Verify chats.create was called with the config
         mock_chats.create.assert_called_once_with(
@@ -93,9 +93,7 @@ class TestAIService(unittest.TestCase):
         mock_response.text = "Response"
         mock_chat_session.send_message.return_value = mock_response
 
-        service.send_message_with_context(
-            mock_chat_session, "Hello", "Chapter: Test"
-        )
+        service.send_message_with_context(mock_chat_session, "Hello", "Chapter: Test")
 
         sent_text = mock_chat_session.send_message.call_args[0][0]
         self.assertIn("[CONTEXT]", sent_text)

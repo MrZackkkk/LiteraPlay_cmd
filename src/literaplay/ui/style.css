@@ -480,19 +480,13 @@ button {
     flex: 1;
     background: transparent;
     border: none;
-    cursor: pointer;
+    cursor: text;
+    color: var(--text-primary);
     font-size: 14px;
     font-weight: 500;
+    outline: none;
 }
 
-.chat-input-wrapper {
-    display: flex;
-    gap: 15px;
-    border-radius: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
 
 .btn-send {
     background: var(--accent);

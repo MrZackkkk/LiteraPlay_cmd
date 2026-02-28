@@ -4,6 +4,13 @@ let currentUserCharacter = "Ти"; // Default
 let currentColor = "";
 let libraryData = {};
 
+/** Escape HTML special characters to prevent XSS. */
+function sanitizeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Initialize QWebChannel
 document.addEventListener("DOMContentLoaded", () => {
     new QWebChannel(qt.webChannelTransport, (channel) => {
@@ -230,8 +237,9 @@ function _renderChatMessage(sender, text, isUser, isSystem) {
         html += `<span class="sender-name">${sender}</span>`;
     }
 
-    // Convert newlines to breaks
-    const formattedText = text.replace(/\\n/g, '<br>');
+    // Convert newlines to breaks (sanitize first to prevent XSS)
+    const safeText = sanitizeHtml(text);
+    const formattedText = safeText.replace(/\n/g, '<br>');
     html += `<div class="bubble">${formattedText}</div>`;
 
     wrapper.innerHTML = html;

@@ -115,10 +115,11 @@ LiteraPlay_cmd/
 │   └── literaplay/
 │       ├── __init__.py
 │       ├── main.py                 # Entry point — QMainWindow, WebChannel bridge, QThread workers
-│       ├── ai_service.py           # AIService class — dual SDK init, chat creation, message sending + retry
-│       ├── config.py               # Environment config — API key, model name, UI defaults
+│       ├── ai_service.py           # AIService class — chat creation, message sending + retry
+│       ├── config.py               # Environment config — API key, model name
 │       ├── data.py                 # LIBRARY dict — scenarios, character prompts, novel text loading
 │       ├── response_parser.py      # JSON response parser — handles plain, fenced, and embedded JSON
+│       ├── story_state.py          # Story state tracking — chapters, turns, context injection
 │       ├── dependency_compat.py    # Fallback implementations for python-dotenv
 │       └── ui/
 │           ├── index.html          # Frontend markup (API screen, menu, chat)
@@ -128,8 +129,8 @@ LiteraPlay_cmd/
 │   ├── test_ai_service.py
 │   ├── test_data.py
 │   ├── test_dependency_compat.py
-
-│   └── test_response_parser.py
+│   ├── test_response_parser.py
+│   └── test_story_state.py
 ├── requirements.txt
 ├── pyrightconfig.json
 └── .gitignore

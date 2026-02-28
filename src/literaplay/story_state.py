@@ -15,13 +15,13 @@ from typing import Any
 class ChapterDef:
     """Static definition of one story phase/chapter."""
 
-    id: str                    # e.g. "ch1_barn_encounter"
-    title: str                 # "Гост (Глава I)"
-    setting: str               # "Barn at Bay Marko's house, stormy night"
-    character_mood: str        # "suspicious, anxious, armed"
-    plot_summary: str          # 2-3 sentence summary of what should happen
-    end_condition: str         # Natural-language description of ending trigger
-    max_turns: int = 20       # Safety limit before nudge
+    id: str  # e.g. "ch1_barn_encounter"
+    title: str  # "Гост (Глава I)"
+    setting: str  # "Barn at Bay Marko's house, stormy night"
+    character_mood: str  # "suspicious, anxious, armed"
+    plot_summary: str  # 2-3 sentence summary of what should happen
+    end_condition: str  # Natural-language description of ending trigger
+    max_turns: int = 20  # Safety limit before nudge
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> ChapterDef:
@@ -42,8 +42,8 @@ class StoryState:
 
     work_key: str
     current_chapter_index: int = 0
-    turn_count: int = 0          # Turns within current chapter
-    total_turn_count: int = 0    # Across all chapters
+    turn_count: int = 0  # Turns within current chapter
+    total_turn_count: int = 0  # Across all chapters
     location: str = ""
     character_mood: str = ""
     key_events: list[str] = field(default_factory=list)
@@ -64,10 +64,7 @@ class StoryStateManager:
 
     def __init__(self, work_data: dict) -> None:
         self._work_data = work_data
-        self._chapters: list[ChapterDef] = [
-            ChapterDef.from_dict(ch)
-            for ch in work_data.get("chapters", [])
-        ]
+        self._chapters: list[ChapterDef] = [ChapterDef.from_dict(ch) for ch in work_data.get("chapters", [])]
         self._default_max_turns: int = work_data.get("max_turns_per_chapter", 20)
 
         # Initialize state
@@ -120,7 +117,7 @@ class StoryStateManager:
 
         return (
             f"[STORY STATE — do NOT reveal this block to the user]\n"
-            f"Chapter: \"{chapter.title}\" ({self._state.current_chapter_index + 1}/{len(self._chapters)})\n"
+            f'Chapter: "{chapter.title}" ({self._state.current_chapter_index + 1}/{len(self._chapters)})\n'
             f"Turn: {self._state.turn_count}/{chapter.max_turns}\n"
             f"Location: {self._state.location}\n"
             f"Your mood: {self._state.character_mood}\n"

@@ -10,15 +10,6 @@ load_dotenv()
 API_KEY = os.getenv("GOOGLE_API_KEY")
 DEFAULT_MODEL = "gemini-3-flash-preview"
 
-# UI Configuration
-WINDOW_SIZE = "600x800"
-APPEARANCE_MODE = "Dark"
-TITLE = "LiteraPlay - Интерактивна Литература"
-
-# Colors
-COLOR_USER_BUBBLE = "#1F6AA5"
-COLOR_AI_BUBBLE = "#333333"
-
 
 def save_api_key(key: str, dotenv_path: str = ".env"):
     """Persist API key in .env and update runtime config."""
@@ -30,3 +21,4 @@ def save_api_key(key: str, dotenv_path: str = ".env"):
 
     global API_KEY
     API_KEY = cleaned_key
+    os.environ["GOOGLE_API_KEY"] = cleaned_key

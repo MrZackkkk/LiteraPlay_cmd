@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import Callable
 
 
-
 def load_dotenv_functions() -> tuple[Callable[[], bool], Callable[[str, str, str], tuple[bool, str, str]]]:
     """Return (load_dotenv, set_key).
 

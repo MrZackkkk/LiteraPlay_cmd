@@ -103,4 +103,3 @@ def validate_story_response(
     result["options"] = options
 
     return result
-

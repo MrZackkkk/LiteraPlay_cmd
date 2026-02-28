@@ -1,4 +1,3 @@
-import json
 import logging
 import time
 from typing import Callable, Optional
@@ -7,9 +6,7 @@ try:
     import google.genai as genai
     from google.genai import types
 except ImportError as exc:  # pragma: no cover
-    raise ImportError(
-        "Gemini SDK is not available. Install it with `pip install -U google-genai`."
-    ) from exc
+    raise ImportError("Gemini SDK is not available. Install it with `pip install -U google-genai`.") from exc
 
 
 # Strict instruction to append to system prompts
@@ -39,6 +36,7 @@ def validate_api_key_with_available_sdk(key: str) -> tuple[bool, str]:
         return False, "Моля, въведете API ключ."
 
     from literaplay import config
+
     model_name = config.DEFAULT_MODEL
 
     try:
