@@ -50,13 +50,69 @@
     <!-- ================== SCREEN 2: MENU ================== -->
     <div id="menu-screen" class="screen hidden layout-column">
         <header class="menu-header">
-            <span class="badge">✦ LITERAPLAY SELECT</span>
-            <h1 class="main-title">Избери произведение</h1>
-            <p class="subtitle mt-2">Потопи се в диалог с легендарни герои – динамично, стилно и живо.</p>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div>
+                    <span class="badge">✦ LITERAPLAY SELECT</span>
+                    <h1 class="main-title">Избери произведение</h1>
+                    <p class="subtitle mt-2">Потопи се в диалог с легендарни герои – динамично, стилно и живо.</p>
+                </div>
+                <button id="btn-open-settings" class="btn-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                    <span>Настройки</span>
+                </button>
+            </div>
         </header>
 
         <main class="cards-grid" id="library-cards-container">
             <!-- Cards will be injected by JS -->
+        </main>
+    </div>
+
+    <!-- ================== SCREEN 2A: SETTINGS ================== -->
+    <div id="settings-screen" class="screen hidden layout-column">
+        <header class="menu-header">
+            <button id="btn-close-settings" class="btn-icon mb-4">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="19" y1="12" x2="5" y2="12"></line>
+                    <polyline points="12 19 5 12 12 5"></polyline>
+                </svg>
+                <span>Назад</span>
+            </button>
+            <span class="badge">✦ LITERAPLAY CONFIG</span>
+            <h1 class="main-title">Настройки</h1>
+        </header>
+
+        <main class="settings-grid">
+            <div class="glass-card settings-card">
+                <h2>AI Модел</h2>
+                <p class="subtitle">Избери кой Gemini модел да генерира историята.</p>
+
+                <div class="input-group">
+                    <input type="hidden" id="model-picker" value="gemini-3-flash-preview">
+                    <div class="custom-select" id="custom-model-select">
+                        <div class="select-selected">gemini-3-flash-preview (Подразбиране)</div>
+                        <div class="select-items select-hide">
+                            <div data-value="gemini-3.1-pro-preview">gemini-3.1-pro-preview</div>
+                            <div data-value="gemini-3-flash-preview" class="same-as-selected">gemini-3-flash-preview
+                                (Подразбиране)</div>
+                            <div data-value="gemini-2.5-flash">gemini-2.5-flash</div>
+                            <div data-value="gemini-2.5-pro">gemini-2.5-pro</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="action-row">
+                    <p id="settings-status"></p>
+                    <button id="btn-save-settings" class="btn-primary">Запази</button>
+                </div>
+            </div>
         </main>
     </div>
 

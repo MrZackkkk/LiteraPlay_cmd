@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
         backend.chatEnded.connect(handleChatEnded);
         backend.storyProgressUpdated.connect(handleStoryProgress);
         backend.chapterTransition.connect(handleChapterTransition);
+        backend.currentModel.connect(handleCurrentModel);
 
         // Tell Python we are ready
         backend.request_initial_state();
@@ -71,6 +72,32 @@ function setupEventListeners() {
         showScreen("menu");
     });
 
+    // Settings Screen
+    document.getElementById("btn-open-settings").addEventListener("click", () => {
+        showScreen("settings");
+    });
+
+    document.getElementById("btn-close-settings").addEventListener("click", () => {
+        showScreen("menu");
+    });
+
+    document.getElementById("btn-save-settings").addEventListener("click", () => {
+        const picker = document.getElementById("model-picker");
+        const selectedModel = picker.value;
+        const status = document.getElementById("settings-status");
+
+        status.innerText = "Запазване...";
+        status.style.color = "var(--text-secondary)";
+
+        backend.save_model(selectedModel);
+
+        setTimeout(() => {
+            status.innerText = "Запазено!";
+            status.style.color = "var(--success)";
+            setTimeout(() => { status.innerText = ""; }, 2000);
+        }, 500);
+    });
+
     document.getElementById("btn-send").addEventListener("click", sendInputMsg);
     document.getElementById("chat-input").addEventListener("keypress", (e) => {
         if (e.key === "Enter") sendInputMsg();
@@ -81,6 +108,7 @@ function showScreen(name) {
     document.querySelectorAll(".screen").forEach(s => s.classList.add("hidden"));
     if (name === "api") document.getElementById("api-screen").classList.remove("hidden");
     if (name === "menu") document.getElementById("menu-screen").classList.remove("hidden");
+    if (name === "settings") document.getElementById("settings-screen").classList.remove("hidden");
     if (name === "situation") document.getElementById("situation-screen").classList.remove("hidden");
     if (name === "chat") document.getElementById("chat-screen").classList.remove("hidden");
 }
@@ -97,6 +125,13 @@ function handleApiValidation(isValid, message) {
     } else {
         document.getElementById("api-status").style.color = "var(--error)";
         document.getElementById("api-status").innerText = message;
+    }
+}
+
+function handleCurrentModel(modelName) {
+    const picker = document.getElementById("model-picker");
+    if (picker) {
+        picker.value = modelName;
     }
 }
 

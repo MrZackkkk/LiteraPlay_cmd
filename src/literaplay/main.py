@@ -137,6 +137,7 @@ class BackendBridge(QObject):
     loadingStateChanged = Signal(bool)
     storyProgressUpdated = Signal(str)  # JSON: chapter_title, turn, progress_pct
     chapterTransition = Signal(str)  # chapter title for transition message
+    currentModel = Signal(str) # Let JS know the current active model
 
     def __init__(self, app_window):
         super().__init__()
@@ -156,6 +157,8 @@ class BackendBridge(QObject):
     @Slot()
     def request_initial_state(self):
         """Called by JS when the page finishes loading."""
+        self.currentModel.emit(config.DEFAULT_MODEL)
+        
         if config.API_KEY and self.ai_service:
             # Skip straight to menu
             self.libraryLoaded.emit(_build_library_json())
@@ -185,6 +188,17 @@ class BackendBridge(QObject):
             self.libraryLoaded.emit(_build_library_json())
         except Exception as e:
             self.apiValidationResult.emit(False, str(e))
+
+    @Slot(str)
+    def save_model(self, model_name):
+        config.save_model_name(model_name)
+        if config.API_KEY:
+            try:
+                # Re-initialize the service to apply the new model
+                self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
+                self.currentModel.emit(config.DEFAULT_MODEL)
+            except Exception as e:
+                self.chatError.emit(str(e))
 
     @Slot(str, str)
     def start_chat_session(self, work_key, sit_key):
