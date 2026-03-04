@@ -24,6 +24,9 @@ error*.txt
 coverage*.txt
 cov*.txt
 
+# markdown
+CLAUDE.md
+
 # IDE / Edits
 .vscode/
 .idea/
