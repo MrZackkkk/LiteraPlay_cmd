@@ -150,12 +150,12 @@ class BackendBridge(QObject):
         super().__init__()
         self.app_window = app_window
 
-        self.ai_service = None
+        self.ai_service: AIService | None = None
         self.chat_session = None
-        self.current_work = None
-        self.worker = None
-        self.api_worker = None
-        self.story_manager = None
+        self.current_work: dict | None = None
+        self.worker: AIChatWorker | None = None
+        self.api_worker: APIVerifyWorker | None = None
+        self.story_manager: StoryStateManager | None = None
         # Keep strong references to running workers to prevent premature GC;
         # finished workers are removed automatically via _cleanup_worker.
         self._active_workers: list = []
@@ -232,6 +232,7 @@ class BackendBridge(QObject):
         # Deep-copy sit_data so nested structures (e.g. chapters list)
         # are not shared with the original LIBRARY dict.
         self.current_work = copy.deepcopy(sit_data)
+        assert self.current_work is not None
         self.current_work["_key"] = sit_key
         self.chat_session = None
         self.story_manager = StoryStateManager(self.current_work)
@@ -311,6 +312,8 @@ class BackendBridge(QObject):
 
     def _emit_reply_messages(self, reply):
         """Emit chatMessageReceived for each message in the reply."""
+        if self.current_work is None:
+            return
         for msg in _format_reply_messages(reply, self.current_work["character"]):
             self.chatMessageReceived.emit(json.dumps(msg))
 
@@ -345,18 +348,23 @@ class BackendBridge(QObject):
             self._emit_ended(reply)
         elif chapter_ended:
             self._emit_reply_messages(reply)
-            advanced = self.story_manager.advance_chapter()
+            story_manager = self.story_manager
+            ai_service = self.ai_service
+            current_work = self.current_work
+            if story_manager is None or ai_service is None or current_work is None:
+                return
+            advanced = story_manager.advance_chapter()
             if advanced:
-                next_ch = self.story_manager.current_chapter()
+                next_ch = story_manager.current_chapter()
                 title = next_ch.title if next_ch else ""
                 self.chapterTransition.emit(title)
                 # Create a new chat session for the next chapter
                 try:
-                    self.chat_session = self.ai_service.create_chat(self.current_work["prompt"])
+                    self.chat_session = ai_service.create_chat(current_work["prompt"])
                 except Exception as e:
                     self.chatError.emit(str(e))
                     return
-                self.storyProgressUpdated.emit(json.dumps(self.story_manager.get_progress_info()))
+                self.storyProgressUpdated.emit(json.dumps(story_manager.get_progress_info()))
                 self.chatOptionsUpdated.emit(json.dumps(options))
             else:
                 # No more chapters — story is over
