@@ -34,7 +34,7 @@ def _build_library_json() -> str:
     if _LIBRARY_JSON_CACHE is not None:
         return _LIBRARY_JSON_CACHE
     lib = copy.deepcopy(LIBRARY)
-    for _work_key, work in lib.items():
+    for _, work in lib.items():
         for sit in work.get("situations", []):
             if "user_character" not in sit:
                 sit["user_character"] = "Разказвач"
@@ -210,6 +210,9 @@ class BackendBridge(QObject):
             try:
                 # Re-initialize the service to apply the new model
                 self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
+                # If a chat is active, recreate the session with the new model
+                if self.current_work and self.chat_session:
+                    self.chat_session = self.ai_service.create_chat(self.current_work["prompt"])
                 self.currentModel.emit(config.DEFAULT_MODEL)
             except Exception as e:
                 self.chatError.emit(str(e))

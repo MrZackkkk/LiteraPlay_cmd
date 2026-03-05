@@ -130,7 +130,7 @@ class AIService:
                 return getattr(response, "text", "") or ""
             except Exception as e:
                 err_msg = str(e)
-                if "429" in err_msg and attempt < max_retries - 1:
+                if ("429" in err_msg or "503" in err_msg or "overloaded" in err_msg.lower()) and attempt < max_retries - 1:
                     msg = f"Overloaded. Retrying in {retry_delay}s... (Attempt {attempt + 1})"
                     logging.warning(msg)
                     if status_callback:
