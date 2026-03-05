@@ -1,5 +1,4 @@
 import json
-import re
 from typing import Any
 
 from literaplay.story_state import ChapterDef, StoryState
@@ -23,12 +22,21 @@ def parse_ai_json_response(response_text: str) -> dict[str, Any] | None:
     if isinstance(parsed, dict):
         return parsed
 
-    json_match = re.search(r"\{.*\}", response_text, re.DOTALL)
-    if not json_match:
+    # Try to extract the first balanced JSON object from the text
+    start = response_text.find("{")
+    if start == -1:
         return None
-
-    parsed = _try_parse(json_match.group(0))
-    return parsed if isinstance(parsed, dict) else None
+    depth = 0
+    for i in range(start, len(response_text)):
+        ch = response_text[i]
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                parsed = _try_parse(response_text[start : i + 1])
+                return parsed if isinstance(parsed, dict) else None
+    return None
 
 
 def _strip_markdown_fence(text: str) -> str:

@@ -1,8 +1,12 @@
-"""Tests for main.py helper functions and BackendBridge logic."""
+"""Tests for main.py helper functions.
 
+Covers _format_reply_messages and _build_library_json (T-01).
+"""
+
+import json
 import unittest
 
-from literaplay.main import _format_reply_messages
+from literaplay.main import _build_library_json, _format_reply_messages
 
 
 class TestFormatReplyMessages(unittest.TestCase):
@@ -51,6 +55,46 @@ class TestFormatReplyMessages(unittest.TestCase):
         for msg in result:
             self.assertFalse(msg["isUser"])
             self.assertFalse(msg["isSystem"])
+
+
+class TestBuildLibraryJson(unittest.TestCase):
+    """T-01: Tests for _build_library_json helper."""
+
+    @classmethod
+    def setUpClass(cls):
+        # Reset the cache so we get a fresh build
+        import literaplay.main as main_mod
+
+        main_mod._LIBRARY_JSON_CACHE = None
+
+    def test_returns_valid_json(self):
+        result = _build_library_json()
+        parsed = json.loads(result)
+        self.assertIsInstance(parsed, dict)
+
+    def test_contains_all_library_keys(self):
+        result = _build_library_json()
+        parsed = json.loads(result)
+        self.assertIn("pod_igoto", parsed)
+        self.assertIn("nemili", parsed)
+        self.assertIn("tyutyun", parsed)
+
+    def test_situations_have_user_character(self):
+        result = _build_library_json()
+        parsed = json.loads(result)
+        for work_key, work in parsed.items():
+            for i, sit in enumerate(work.get("situations", [])):
+                self.assertIn(
+                    "user_character",
+                    sit,
+                    f"Missing user_character in {work_key} situations[{i}]",
+                )
+
+    def test_result_is_cached(self):
+        """Second call returns the same string object (cached)."""
+        first = _build_library_json()
+        second = _build_library_json()
+        self.assertIs(first, second)
 
 
 if __name__ == "__main__":

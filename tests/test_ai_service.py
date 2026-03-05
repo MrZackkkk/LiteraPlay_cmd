@@ -1,7 +1,9 @@
+"""Tests for ai_service module."""
+
 import unittest
 from unittest.mock import MagicMock, patch
 
-from literaplay.ai_service import AIService
+from literaplay.ai_service import AIService, _sanitize_api_error
 
 
 class TestAIService(unittest.TestCase):
@@ -57,8 +59,9 @@ class TestAIService(unittest.TestCase):
         response = service.send_message(mock_chat_session, "Hello")
         self.assertEqual(response, "AI Response")
 
+    @patch("literaplay.ai_service._interruptible_sleep")
     @patch("literaplay.ai_service.genai.Client")
-    def test_send_message_retry(self, mock_client_cls):
+    def test_send_message_retry(self, mock_client_cls, mock_sleep):
         service = AIService(self.api_key, self.model_name)
         mock_chat_session = MagicMock()
 
@@ -69,12 +72,13 @@ class TestAIService(unittest.TestCase):
 
         callback = MagicMock()
 
-        with patch("time.sleep"):
-            response = service.send_message(mock_chat_session, "Hello", status_callback=callback)
+        response = service.send_message(mock_chat_session, "Hello", status_callback=callback)
 
         self.assertEqual(response, "Success after retry")
         callback.assert_called_once()
         self.assertEqual(mock_chat_session.send_message.call_count, 2)
+        # Verify sleep was called (interruptible chunks)
+        self.assertTrue(mock_sleep.call_count > 0)
 
     @patch("literaplay.ai_service.genai.Client")
     def test_send_message_missing_text_returns_empty_string(self, mock_client_cls):
@@ -115,33 +119,70 @@ class TestAIService(unittest.TestCase):
         self.assertNotIn("[CONTEXT]", sent_text)
 
 
-@patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
-@patch("literaplay.ai_service.genai.Client")
-def test_validate_api_key_uses_generate_content(mock_client_cls):
-    from literaplay.ai_service import validate_api_key_with_available_sdk
+class TestSanitizeApiError(unittest.TestCase):
+    """T-03: Tests for the security-critical _sanitize_api_error function."""
 
-    mock_client = mock_client_cls.return_value
-    ok, message = validate_api_key_with_available_sdk("valid-key")
+    def test_strips_literal_key(self):
+        key = "AIzaSyFakeKey12345"
+        exc = Exception(f"Error at https://api.example.com/v1?key={key}&foo=bar")
+        result = _sanitize_api_error(exc, key)
+        self.assertNotIn(key, result)
+        self.assertIn("***", result)
 
-    assert ok is True
-    assert "валиден" in message
-    mock_client.models.generate_content.assert_called_once()
+    def test_strips_key_query_param(self):
+        exc = Exception("Error at https://api.example.com/v1?key=SomeOtherKey123")
+        result = _sanitize_api_error(exc, "not-the-key")
+        self.assertNotIn("SomeOtherKey123", result)
+        self.assertIn("?key=***", result)
+
+    def test_strips_ampersand_key_param(self):
+        exc = Exception("Error at https://api.example.com/v1?foo=bar&key=Secret456")
+        result = _sanitize_api_error(exc, "not-the-key")
+        self.assertNotIn("Secret456", result)
+
+    def test_empty_key_does_not_crash(self):
+        exc = Exception("Some error")
+        result = _sanitize_api_error(exc, "")
+        self.assertEqual(result, "Some error")
+
+    def test_none_key_does_not_crash(self):
+        exc = Exception("Some error")
+        result = _sanitize_api_error(exc, None)
+        self.assertEqual(result, "Some error")
+
+    def test_preserves_useful_message(self):
+        exc = Exception("Model not found: gemini-pro")
+        result = _sanitize_api_error(exc, "test-key")
+        self.assertIn("Model not found: gemini-pro", result)
 
 
-@patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
-@patch("literaplay.ai_service.genai.Client")
-def test_validate_api_key_falls_back_to_list_models_on_generate_error(mock_client_cls):
-    from literaplay.ai_service import validate_api_key_with_available_sdk
+class TestValidateApiKey(unittest.TestCase):
+    @patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
+    @patch("literaplay.ai_service.genai.Client")
+    def test_validate_api_key_uses_generate_content(self, mock_client_cls):
+        from literaplay.ai_service import validate_api_key_with_available_sdk
 
-    mock_client = mock_client_cls.return_value
-    mock_client.models.generate_content.side_effect = Exception("generation blocked")
-    mock_client.models.list.return_value = iter([object()])
+        mock_client = mock_client_cls.return_value
+        ok, message = validate_api_key_with_available_sdk("valid-key")
 
-    ok, message = validate_api_key_with_available_sdk("valid-key")
+        self.assertTrue(ok)
+        self.assertIn("валиден", message)
+        mock_client.models.generate_content.assert_called_once()
 
-    assert ok is True
-    assert "валиден" in message
-    mock_client.models.list.assert_called_once()
+    @patch("literaplay.config.DEFAULT_MODEL", "gemini-test")
+    @patch("literaplay.ai_service.genai.Client")
+    def test_validate_api_key_falls_back_to_list_models(self, mock_client_cls):
+        from literaplay.ai_service import validate_api_key_with_available_sdk
+
+        mock_client = mock_client_cls.return_value
+        mock_client.models.generate_content.side_effect = Exception("generation blocked")
+        mock_client.models.list.return_value = iter([object()])
+
+        ok, message = validate_api_key_with_available_sdk("valid-key")
+
+        self.assertTrue(ok)
+        self.assertIn("валиден", message)
+        mock_client.models.list.assert_called_once()
 
 
 if __name__ == "__main__":

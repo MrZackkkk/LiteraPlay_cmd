@@ -1,8 +1,10 @@
 {
-    "extraPaths": [
-        "src"
+    "include": [
+        "src",
+        "tests"
     ],
-    "venvPath": ".",
-    "venv": "venv",
-    "pythonVersion": "3.12"
+    "pythonVersion": "3.11",
+    "typeCheckingMode": "basic",
+    "reportMissingImports": true,
+    "reportUnusedImport": true
 }

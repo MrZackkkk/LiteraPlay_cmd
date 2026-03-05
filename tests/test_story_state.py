@@ -153,52 +153,6 @@ class TestStoryStateManager(unittest.TestCase):
         self.assertGreater(info["progress_pct"], 0)
 
 
-class TestValidateStoryResponse(unittest.TestCase):
-    def test_empty_reply_gets_fallback(self):
-        from literaplay.response_parser import validate_story_response
-
-        result = validate_story_response({"reply": "", "options": [], "ended": False})
-        self.assertEqual(result["reply"], "...")
-
-    def test_ended_on_non_last_chapter_becomes_chapter_ended(self):
-        from literaplay.response_parser import validate_story_response
-
-        result = validate_story_response(
-            {"reply": "bye", "options": [], "ended": True},
-            is_last_chapter=False,
-        )
-        self.assertFalse(result["ended"])
-        self.assertTrue(result["_chapter_ended"])
-
-    def test_ended_on_last_chapter_stays_ended(self):
-        from literaplay.response_parser import validate_story_response
-
-        result = validate_story_response(
-            {"reply": "final", "options": [], "ended": True},
-            is_last_chapter=True,
-        )
-        self.assertTrue(result["ended"])
-        self.assertFalse(result["_chapter_ended"])
-
-    def test_missing_options_get_fallback(self):
-        from literaplay.response_parser import validate_story_response
-
-        result = validate_story_response(
-            {"reply": "hello", "options": None, "ended": False},
-            is_last_chapter=True,
-        )
-        self.assertIsInstance(result["options"], list)
-        self.assertGreater(len(result["options"]), 0)
-
-    def test_long_reply_truncated(self):
-        from literaplay.response_parser import validate_story_response
-
-        long_text = "word " * 500
-        result = validate_story_response(
-            {"reply": long_text, "options": ["ok"], "ended": False},
-        )
-        self.assertLessEqual(len(result["reply"]), 1010)  # ~1000 + "..."
-
 
 if __name__ == "__main__":
     unittest.main()

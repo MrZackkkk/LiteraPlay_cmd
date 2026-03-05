@@ -1,6 +1,5 @@
 import logging
 import re
-import time
 from collections.abc import Callable
 
 try:
@@ -8,6 +7,18 @@ try:
     from google.genai import types
 except ImportError as exc:  # pragma: no cover
     raise ImportError("Gemini SDK is not available. Install it with `pip install -U google-genai`.") from exc
+
+
+def _interruptible_sleep(ms: int) -> None:
+    """Sleep for *ms* milliseconds using QThread.msleep when available."""
+    try:
+        from PySide6.QtCore import QThread
+
+        QThread.msleep(ms)
+    except ImportError:
+        import time
+
+        time.sleep(ms / 1000)
 
 
 # Strict instruction to append to system prompts
@@ -87,9 +98,6 @@ class AIService:
 
     def create_chat(self, system_instruction: str, response_mime_type: str = "application/json"):
         """Creates a new chat session with the given system instruction."""
-        if not self.client:
-            raise RuntimeError("Client not initialized")
-
         enhanced_instruction = f"{system_instruction}\n\n{STRICT_SYSTEM_INSTRUCTION}"
 
         config = types.GenerateContentConfig(
@@ -128,10 +136,17 @@ class AIService:
                     if status_callback:
                         status_callback(msg)
 
-                    time.sleep(retry_delay)
+                    # Interruptible sleep: break into 500ms chunks so the
+                    # thread can be interrupted / the application can exit.
+                    remaining_ms = retry_delay * 1000
+                    while remaining_ms > 0:
+                        chunk = min(remaining_ms, 500)
+                        _interruptible_sleep(chunk)
+                        remaining_ms -= chunk
+
                     retry_delay *= 2
                 else:
-                    logging.error(f"API Error: {e}")
+                    logging.error("API Error: %s", e)
                     raise
 
         raise RuntimeError("Max retries reached")

@@ -212,21 +212,33 @@ function renderLibrary(libraryJson) {
     const container = document.getElementById("library-cards-container");
     container.innerHTML = "";
 
+    let cardIndex = 0;
     for (const [key, data] of Object.entries(libraryData)) {
         const card = document.createElement("div");
         card.className = "library-card glass-card";
+        card.style.setProperty("--card-index", cardIndex++);
 
         const safeColor = data.color || "var(--accent)";
-        let numSituations = "";
+
+        const h2 = document.createElement("h2");
+        h2.textContent = data.title;
+        card.appendChild(h2);
+
         if (data.situations && data.situations.length > 0) {
-            numSituations = `Ситуации: ${data.situations.length}`;
+            const p = document.createElement("p");
+            p.className = "char-info";
+            p.style.color = safeColor;
+            p.textContent = `Ситуации: ${data.situations.length}`;
+            card.appendChild(p);
         }
 
-        card.innerHTML = `
-            <h2>${data.title}</h2>
-            <p class="char-info" style="color: ${safeColor}">${numSituations}</p>
-            <button class="btn-card" style="background-color: ${safeColor}" onclick="showSituations('${key}')">Избери</button>
-        `;
+        const btn = document.createElement("button");
+        btn.className = "btn-card";
+        btn.style.backgroundColor = safeColor;
+        btn.textContent = "Избери";
+        btn.addEventListener("click", () => showSituations(key));
+        card.appendChild(btn);
+
         container.appendChild(card);
     }
 }
@@ -240,9 +252,10 @@ function showSituations(workKey) {
     const container = document.getElementById("situation-cards-container");
     container.innerHTML = "";
 
-    workData.situations.forEach((sit) => {
+    workData.situations.forEach((sit, idx) => {
         const card = document.createElement("div");
         card.className = "library-card glass-card";
+        card.style.setProperty("--card-index", idx);
 
         const safeColor = sit.color || workData.color || "var(--accent)";
 
@@ -250,11 +263,23 @@ function showSituations(workKey) {
             ? `Герои: ${sit.characters}`
             : `Герой: ${sit.character}`;
 
-        card.innerHTML = `
-            <h2>${sit.title}</h2>
-            <p class="char-info" style="color: ${safeColor}">${charDisplay}</p>
-            <button class="btn-card" style="background-color: ${safeColor}" onclick="startChat('${workKey}', '${sit.key}')">Започни разговор</button>
-        `;
+        const h2 = document.createElement("h2");
+        h2.textContent = sit.title;
+        card.appendChild(h2);
+
+        const p = document.createElement("p");
+        p.className = "char-info";
+        p.style.color = safeColor;
+        p.textContent = charDisplay;
+        card.appendChild(p);
+
+        const btn = document.createElement("button");
+        btn.className = "btn-card";
+        btn.style.backgroundColor = safeColor;
+        btn.textContent = "Започни разговор";
+        btn.addEventListener("click", () => startChat(workKey, sit.key));
+        card.appendChild(btn);
+
         container.appendChild(card);
     });
 
@@ -390,9 +415,9 @@ function renderChatOptions(optionsJson) {
         btn.className = "btn-option";
         if (isCanonical) {
             btn.classList.add("canonical-option");
-            btn.innerHTML = `📖 ${displayText}`;
+            btn.textContent = `📖 ${displayText}`;
         } else {
-            btn.innerText = displayText;
+            btn.textContent = displayText;
         }
 
         btn.onmouseover = () => {

@@ -1,6 +1,8 @@
 import contextlib
+import copy
 import json
 import logging
+import re
 import sys
 from pathlib import Path
 
@@ -23,16 +25,21 @@ from literaplay.story_state import StoryStateManager
 UI_PATH = Path(__file__).parent / "ui" / "index.html"
 
 
+_LIBRARY_JSON_CACHE: str | None = None
+
+
 def _build_library_json() -> str:
-    """Build a JSON-serializable copy of LIBRARY."""
-    import copy
+    """Build a JSON-serializable copy of LIBRARY (cached after first call)."""
+    global _LIBRARY_JSON_CACHE
+    if _LIBRARY_JSON_CACHE is not None:
+        return _LIBRARY_JSON_CACHE
     lib = copy.deepcopy(LIBRARY)
     for _work_key, work in lib.items():
         for sit in work.get("situations", []):
-            # Ensure user_character is set if not present
             if "user_character" not in sit:
                 sit["user_character"] = "Разказвач"
-    return json.dumps(lib)
+    _LIBRARY_JSON_CACHE = json.dumps(lib)
+    return _LIBRARY_JSON_CACHE
 
 
 # ================== WORKER THREAD ==================
@@ -149,8 +156,9 @@ class BackendBridge(QObject):
         self.worker = None
         self.api_worker = None
         self.story_manager = None
-        # Keep strong references to all workers to prevent premature GC
-        self._all_workers: list = []
+        # Keep strong references to running workers to prevent premature GC;
+        # finished workers are removed automatically via _cleanup_worker.
+        self._active_workers: list = []
 
         if config.API_KEY:
             with contextlib.suppress(Exception):
@@ -175,8 +183,7 @@ class BackendBridge(QObject):
             return
         self.api_worker = APIVerifyWorker(key)
         self.api_worker.finished_signal.connect(self._on_api_validation_worker_done)
-        # Keep a strong reference so Python GC cannot collect the QThread while running
-        self._all_workers.append(self.api_worker)
+        self._track_worker(self.api_worker)
         self.api_worker.start()
 
     @Slot(bool, str)
@@ -219,9 +226,9 @@ class BackendBridge(QObject):
             self.chatError.emit("Situation not found.")
             return
 
-        # Shallow-copy sit_data so we do not mutate the shared LIBRARY dict.
-        # StoryStateManager needs "_key" injected at runtime.
-        self.current_work = dict(sit_data)
+        # Deep-copy sit_data so nested structures (e.g. chapters list)
+        # are not shared with the original LIBRARY dict.
+        self.current_work = copy.deepcopy(sit_data)
         self.current_work["_key"] = sit_key
         self.chat_session = None
         self.story_manager = StoryStateManager(self.current_work)
@@ -244,6 +251,26 @@ class BackendBridge(QObject):
     # Prevents context-window exhaustion and prompt-injection via huge payloads.
     _MAX_USER_MESSAGE_CHARS = 2000
 
+    # Patterns commonly used in prompt-injection attempts
+    _INJECTION_RE = re.compile(
+        r"(ignore\s+(all\s+)?previous\s+instructions"
+        r"|system\s*prompt"
+        r"|you\s+are\s+now"
+        r"|\boverride\b"
+        r"|\breset\b.*\binstructions\b)",
+        re.IGNORECASE,
+    )
+
+    def _track_worker(self, worker) -> None:
+        """Keep a strong ref to *worker* and auto-remove it when finished."""
+        self._active_workers.append(worker)
+        worker.finished.connect(lambda w=worker: self._cleanup_worker(w))
+
+    def _cleanup_worker(self, worker) -> None:
+        """Remove a finished worker from the active list."""
+        with contextlib.suppress(ValueError):
+            self._active_workers.remove(worker)
+
     @Slot(str)
     def send_user_message(self, text):
         if not self.ai_service or not self.chat_session:
@@ -261,6 +288,11 @@ class BackendBridge(QObject):
             text = text[: self._MAX_USER_MESSAGE_CHARS]
             logging.warning("User message truncated to %d characters", self._MAX_USER_MESSAGE_CHARS)
 
+        # Basic prompt-injection defence: strip known attack patterns
+        text = self._INJECTION_RE.sub("", text).strip()
+        if not text:
+            return
+
         self.loadingStateChanged.emit(True)
 
         # Build context injection from story state
@@ -271,8 +303,7 @@ class BackendBridge(QObject):
         self.worker = AIChatWorker(self.ai_service, self.chat_session, text, context)
         self.worker.response_signal.connect(self._on_chat_response_worker)
         self.worker.error_signal.connect(self._on_chat_error_worker)
-        # Keep a strong reference so Python GC cannot collect the QThread while running
-        self._all_workers.append(self.worker)
+        self._track_worker(self.worker)
         self.worker.start()
 
     def _emit_reply_messages(self, reply):
@@ -365,9 +396,7 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Ensure running QThread workers are stopped before exit."""
-        # Request all workers to stop and wait briefly.  _all_workers contains
-        # strong references to every worker ever created so none are missed.
-        for worker in self.backend._all_workers:
+        for worker in list(self.backend._active_workers):
             if worker is not None and worker.isRunning():
                 worker.quit()
                 worker.wait(3000)
