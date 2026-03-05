@@ -11,7 +11,7 @@ from importlib import import_module
 from pathlib import Path
 
 
-def load_dotenv_functions() -> tuple[Callable[[], bool], Callable[[str, str, str], tuple[bool, str, str]]]:
+def load_dotenv_functions() -> tuple[Callable[..., bool], Callable[[str, str, str], tuple[bool, str, str]]]:
     """Return (load_dotenv, set_key).
 
     Falls back to lightweight local implementations when python-dotenv

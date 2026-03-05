@@ -3,6 +3,9 @@ let currentCharacterName = "";
 let currentUserCharacter = "Анонимен"; // Default
 let currentColor = "";
 let libraryData = {};
+// H-04: Cache the validated key at the moment it is confirmed valid, so the
+// dialog handlers do not re-read the (possibly now-stale) input field.
+let _validatedApiKey = "";
 
 
 /** Escape HTML special characters to prevent XSS. */
@@ -46,19 +49,25 @@ function setupEventListeners() {
         document.getElementById("btn-verify").disabled = true;
         document.getElementById("btn-verify").innerText = "Checking...";
         document.getElementById("api-status").innerText = "Проверка на API ключ...";
+        // Clear any previously cached key before starting a new verification
+        _validatedApiKey = "";
         backend.verify_api_key(key);
     });
 
     document.getElementById("btn-dialog-no").addEventListener("click", () => {
         document.getElementById("dialog-overlay").classList.add("hidden");
-        const key = document.getElementById("api-key-input").value.trim();
-        backend.save_api_key_decision(key, false);
+        // H-04: Use the cached validated key, not the (potentially stale) input field
+        if (_validatedApiKey) {
+            backend.save_api_key_decision(_validatedApiKey, false);
+        }
     });
 
     document.getElementById("btn-dialog-yes").addEventListener("click", () => {
         document.getElementById("dialog-overlay").classList.add("hidden");
-        const key = document.getElementById("api-key-input").value.trim();
-        backend.save_api_key_decision(key, true);
+        // H-04: Use the cached validated key, not the (potentially stale) input field
+        if (_validatedApiKey) {
+            backend.save_api_key_decision(_validatedApiKey, true);
+        }
     });
 
     // Situation Screen
@@ -125,8 +134,8 @@ function setupCustomSelect() {
             // Update hidden input
             hiddenInput.value = this.getAttribute("data-value");
 
-            // Update UI text
-            selected.innerHTML = this.innerHTML;
+            // M-05: Use textContent (not innerHTML) to avoid XSS from model names
+            selected.textContent = this.textContent;
 
             // Update selected class
             options.forEach(opt => opt.classList.remove("same-as-selected"));
@@ -163,9 +172,13 @@ function handleApiValidation(isValid, message) {
     document.getElementById("btn-verify").innerText = "Verify & Save";
 
     if (isValid) {
+        // H-04: Cache the key at the moment we know it is valid. The dialog
+        // handlers will use this cached value instead of re-reading the input.
+        _validatedApiKey = document.getElementById("api-key-input").value.trim();
         document.getElementById("api-status").innerText = "";
         document.getElementById("dialog-overlay").classList.remove("hidden");
     } else {
+        _validatedApiKey = "";
         document.getElementById("api-status").style.color = "var(--error)";
         document.getElementById("api-status").innerText = message;
     }
@@ -182,7 +195,8 @@ function handleCurrentModel(modelName) {
 
         items.forEach(item => {
             if (item.getAttribute("data-value") === modelName) {
-                selected.innerHTML = item.innerHTML;
+                // M-05: Use textContent (not innerHTML) to avoid XSS from model names
+                selected.textContent = item.textContent;
                 items.forEach(opt => opt.classList.remove("same-as-selected"));
                 item.classList.add("same-as-selected");
             }

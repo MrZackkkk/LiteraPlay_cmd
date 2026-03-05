@@ -2,7 +2,6 @@ import contextlib
 import json
 import logging
 import sys
-import traceback
 from pathlib import Path
 
 # Allow direct execution from IDEs
@@ -81,7 +80,7 @@ class AIChatWorker(QThread):
                     }
                 )
         except Exception as e:
-            traceback.print_exc()
+            logging.exception("AIChatWorker encountered an error")
             self.error_signal.emit(str(e))
 
 
@@ -150,6 +149,8 @@ class BackendBridge(QObject):
         self.worker = None
         self.api_worker = None
         self.story_manager = None
+        # Keep strong references to all workers to prevent premature GC
+        self._all_workers: list = []
 
         if config.API_KEY:
             with contextlib.suppress(Exception):
@@ -159,7 +160,7 @@ class BackendBridge(QObject):
     def request_initial_state(self):
         """Called by JS when the page finishes loading."""
         self.currentModel.emit(config.DEFAULT_MODEL)
-        
+
         if config.API_KEY and self.ai_service:
             # Skip straight to menu
             self.libraryLoaded.emit(_build_library_json())
@@ -169,8 +170,13 @@ class BackendBridge(QObject):
 
     @Slot(str)
     def verify_api_key(self, key):
+        # Guard against concurrent verification requests
+        if self.api_worker is not None and self.api_worker.isRunning():
+            return
         self.api_worker = APIVerifyWorker(key)
         self.api_worker.finished_signal.connect(self._on_api_validation_worker_done)
+        # Keep a strong reference so Python GC cannot collect the QThread while running
+        self._all_workers.append(self.api_worker)
         self.api_worker.start()
 
     @Slot(bool, str)
@@ -213,8 +219,9 @@ class BackendBridge(QObject):
             self.chatError.emit("Situation not found.")
             return
 
-        self.current_work = sit_data
-        # Store the key inside work data so StoryStateManager can reference it
+        # Shallow-copy sit_data so we do not mutate the shared LIBRARY dict.
+        # StoryStateManager needs "_key" injected at runtime.
+        self.current_work = dict(sit_data)
         self.current_work["_key"] = sit_key
         self.chat_session = None
         self.story_manager = StoryStateManager(self.current_work)
@@ -233,6 +240,10 @@ class BackendBridge(QObject):
             except Exception as e:
                 self.chatError.emit(str(e))
 
+    # Maximum number of characters accepted from the user in a single message.
+    # Prevents context-window exhaustion and prompt-injection via huge payloads.
+    _MAX_USER_MESSAGE_CHARS = 2000
+
     @Slot(str)
     def send_user_message(self, text):
         if not self.ai_service or not self.chat_session:
@@ -242,6 +253,13 @@ class BackendBridge(QObject):
         # Double-send guard: ignore if a worker is already running
         if self.worker is not None and self.worker.isRunning():
             return
+
+        # Validate and cap input length
+        if not text or not text.strip():
+            return
+        if len(text) > self._MAX_USER_MESSAGE_CHARS:
+            text = text[: self._MAX_USER_MESSAGE_CHARS]
+            logging.warning("User message truncated to %d characters", self._MAX_USER_MESSAGE_CHARS)
 
         self.loadingStateChanged.emit(True)
 
@@ -253,6 +271,8 @@ class BackendBridge(QObject):
         self.worker = AIChatWorker(self.ai_service, self.chat_session, text, context)
         self.worker.response_signal.connect(self._on_chat_response_worker)
         self.worker.error_signal.connect(self._on_chat_error_worker)
+        # Keep a strong reference so Python GC cannot collect the QThread while running
+        self._all_workers.append(self.worker)
         self.worker.start()
 
     def _emit_reply_messages(self, reply):
@@ -345,7 +365,9 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self, event):
         """Ensure running QThread workers are stopped before exit."""
-        for worker in (self.backend.worker, self.backend.api_worker):
+        # Request all workers to stop and wait briefly.  _all_workers contains
+        # strong references to every worker ever created so none are missed.
+        for worker in self.backend._all_workers:
             if worker is not None and worker.isRunning():
                 worker.quit()
                 worker.wait(3000)

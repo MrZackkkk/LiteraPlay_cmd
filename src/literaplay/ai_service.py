@@ -1,4 +1,5 @@
 import logging
+import re
 import time
 from collections.abc import Callable
 
@@ -29,6 +30,23 @@ IMPORTANT STRICT GUIDELINES:
 """
 
 
+def _sanitize_api_error(exc: Exception, key: str) -> str:
+    """Return a safe error message with no API key material.
+
+    Gemini SDK exceptions sometimes embed the API key in the URL within the
+    error string (e.g. ``?key=AIzaSy...``).  This function strips any
+    occurrence of the key and also removes common URL query-string patterns
+    before the message is surfaced to the user or logged.
+    """
+    raw = str(exc)
+    # Remove the literal key value
+    if key:
+        raw = raw.replace(key, "***")
+    # Remove any remaining ?key=... or &key=... fragments
+    raw = re.sub(r"[?&]key=[^&\s\"']+", "?key=***", raw)
+    return raw
+
+
 def validate_api_key_with_available_sdk(key: str) -> tuple[bool, str]:
     """Validate API key by making a minimal request to the Gemini API."""
     cleaned_key = (key or "").strip()
@@ -52,7 +70,9 @@ def validate_api_key_with_available_sdk(key: str) -> tuple[bool, str]:
             next(iter(client.models.list()), None)
             return True, "Ключът е валиден."
         except Exception:
-            return False, f"Невалиден ключ или проблем с API: {exc}"
+            safe_msg = _sanitize_api_error(exc, cleaned_key)
+            logging.warning("API key validation failed: %s", safe_msg)
+            return False, f"Невалиден ключ или проблем с API: {safe_msg}"
 
 
 class AIService:
