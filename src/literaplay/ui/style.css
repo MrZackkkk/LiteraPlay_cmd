@@ -905,6 +905,11 @@ button {
 }
 
 /* ================== LANDING SCREEN ================== */
+#api-screen {
+    padding: 48px 24px;
+    box-sizing: border-box;
+}
+
 .api-landing-wrapper {
     width: 100%;
     max-width: 540px;
@@ -928,20 +933,20 @@ button {
 .api-hero-title {
     font-size: 36px;
     text-align: center;
-    margin-top: 14px;
+    margin-top: 12px;
 }
 
 .api-hero-subtitle {
     text-align: center;
     max-width: 420px;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 .api-hero-divider {
     width: 48px;
     height: 1px;
     background: rgba(255, 255, 255, 0.1);
-    margin: 28px auto;
+    margin: 24px auto;
 }
 
 /* Staggered entrance animations */
