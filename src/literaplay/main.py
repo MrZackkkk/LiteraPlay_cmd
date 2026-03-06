@@ -52,6 +52,7 @@ class AIChatWorker(QThread):
 
     def __init__(self, ai_service, chat_session, user_text, context_injection=""):
         super().__init__()
+        self.setStackSize(4 * 1024 * 1024)  # 4 MB — google-genai overflows the default 512 KB
         self.ai_service = ai_service
         self.chat_session = chat_session
         self.user_text = user_text
@@ -100,6 +101,7 @@ class APIVerifyWorker(QThread):
 
     def __init__(self, provider: str, key: str):
         super().__init__()
+        self.setStackSize(4 * 1024 * 1024)  # 4 MB — google-genai overflows the default 512 KB
         self.provider = provider
         self.key = key
 
