@@ -38,7 +38,21 @@ IMPORTANT STRICT GUIDELINES:
   - "mood": a short string describing your current emotional state
   - "location": a short string if the scene location changes
   - "key_event": a short string if a significant plot beat just occurred
+  - "trust_level": integer -3 to +3 representing how much you trust the user's character right now
+  - "tension": short phrase describing the current dramatic tension or stakes
+  - "characters_present": list of character names currently in the scene (include yourself and the user's character)
+  - "active_props": list of objects/props currently relevant to the scene
+- **KNOWLEDGE ASYMMETRY**: This is critical. You must ONLY know what your character would realistically know at this
+  exact point in the story. You have NOT read the book. You do NOT know what happens in future chapters. If someone
+  has not told you their name, you do not know it. If an event happened outside your presence, you are unaware of it.
+  When in doubt, act with less knowledge rather than more. This is the single most important rule for literary realism.
+- **NO ANACHRONISTIC KNOWLEDGE**: Your character exists in a specific historical period. Do not reference events,
+  technology, or social norms from after your time period.
 """
+
+
+class APIOverloadedError(Exception):
+    """Raised when the Gemini API returns repeated 429/503/overloaded responses."""
 
 
 def _sanitize_api_error(exc: Exception, key: str) -> str:
@@ -121,7 +135,7 @@ class AIService:
         if not chat_session:
             raise ValueError("Chat session is not active")
 
-        max_retries = 5
+        max_retries = 3
         retry_delay = 5
 
         for attempt in range(max_retries):
@@ -130,8 +144,12 @@ class AIService:
                 return getattr(response, "text", "") or ""
             except Exception as e:
                 err_msg = str(e)
-                if ("429" in err_msg or "503" in err_msg or "overloaded" in err_msg.lower()) and attempt < max_retries - 1:
-                    msg = f"Overloaded. Retrying in {retry_delay}s... (Attempt {attempt + 1})"
+                is_overload = "429" in err_msg or "503" in err_msg or "overloaded" in err_msg.lower()
+                if not is_overload:
+                    logging.error("API Error: %s", e)
+                    raise
+                if attempt < max_retries - 1:
+                    msg = f"Претоварен. Опит {attempt + 1}/3 след {retry_delay}s..."
                     logging.warning(msg)
                     if status_callback:
                         status_callback(msg)
@@ -145,11 +163,8 @@ class AIService:
                         remaining_ms -= chunk
 
                     retry_delay *= 2
-                else:
-                    logging.error("API Error: %s", e)
-                    raise
 
-        raise RuntimeError("Max retries reached")
+        raise APIOverloadedError("Моделът е претоварен. Опитайте отново след малко.")
 
     def send_message_with_context(
         self,

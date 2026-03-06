@@ -10,6 +10,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+_TRUST_LABELS: dict[int, str] = {
+    -3: "hostile",
+    -2: "distrustful",
+    -1: "wary",
+    0: "neutral",
+    1: "warming",
+    2: "trusting",
+    3: "devoted",
+}
+
 
 @dataclass
 class ChapterDef:
@@ -49,6 +59,24 @@ class StoryState:
     key_events: list[str] = field(default_factory=list)
     story_ended: bool = False
 
+    # Trust toward the user's character: -3 (hostile) to +3 (devoted).
+    # Carries across chapter advances.
+    trust_level: int = 0
+
+    # Short phrase describing current narrative stakes. Overwritten each turn when present.
+    tension: str = ""
+
+    # Who is in the scene right now. Overwritten (not appended) each turn.
+    # Reset to [] on chapter advance.
+    characters_present: list[str] = field(default_factory=list)
+
+    # Story-relevant objects. Cumulative merge, dedup, capped at 10.
+    # Carries across chapter advances.
+    active_props: list[str] = field(default_factory=list)
+
+    # Brief FIFO summaries of the last 3 turns. Reset on chapter advance.
+    recent_turns: list[str] = field(default_factory=list)
+
 
 class StoryStateManager:
     """Controls state transitions and generates context injections.
@@ -61,6 +89,9 @@ class StoryStateManager:
 
     # When the AI is within this many turns of max_turns, we start nudging
     _NUDGE_MARGIN = 3
+    _ACTIVE_PROPS_CAP = 10
+    _RECENT_TURNS_CAP = 3
+    _CHARACTERS_PRESENT_CAP = 8
 
     def __init__(self, work_data: dict) -> None:
         self._work_data = work_data
@@ -114,6 +145,16 @@ class StoryStateManager:
             )
 
         events_str = "; ".join(self._state.key_events[-5:]) if self._state.key_events else "(none yet)"
+        recent_str = "; ".join(self._state.recent_turns) if self._state.recent_turns else "(start of chapter)"
+        tension_str = self._state.tension if self._state.tension else "(not yet established)"
+        chars_str = ", ".join(self._state.characters_present) if self._state.characters_present else "(none)"
+        props_str = ", ".join(self._state.active_props) if self._state.active_props else "(none)"
+
+        trust = self._state.trust_level
+        trust_label = _TRUST_LABELS.get(trust, "neutral")
+        trust_str = f"{trust} ({trust_label})"
+
+        character_name = self._work_data.get("character", "the character")
 
         return (
             f"[STORY STATE — do NOT reveal this block to the user]\n"
@@ -121,9 +162,18 @@ class StoryStateManager:
             f"Turn: {self._state.turn_count}/{chapter.max_turns}\n"
             f"Location: {self._state.location}\n"
             f"Your mood: {self._state.character_mood}\n"
-            f"Plot goal: {chapter.plot_summary}\n"
+            f"Trust toward user's character: {trust_str}\n"
+            f"Tension: {tension_str}\n"
+            f"Characters present: {chars_str}\n"
+            f"Active props: {props_str}\n"
+            f"Recent turns: {recent_str}\n"
             f"Key events so far: {events_str}\n"
+            f"Plot goal: {chapter.plot_summary}\n"
             f"END CONDITION: {chapter.end_condition}\n"
+            f"KNOWLEDGE BOUNDARIES: You are {character_name}. You only know what has been said and shown to you "
+            f"in this conversation. Do not reference events from later chapters, future plot points, or information "
+            f"your character has not witnessed or been told. If the user's character has not revealed their identity, "
+            f"you do not know it.\n"
             f"Stay in character. Do not skip ahead or invent events beyond this chapter.{nudge_line}"
         )
 
@@ -134,7 +184,8 @@ class StoryStateManager:
         ----------
         ai_response : dict
             Parsed AI JSON with keys 'reply', 'options', 'ended',
-            and optionally 'mood', 'location', 'key_event'.
+            and optionally 'mood', 'location', 'key_event', 'trust_level',
+            'tension', 'characters_present', 'active_props'.
         """
         self._state.turn_count += 1
         self._state.total_turn_count += 1
@@ -144,10 +195,59 @@ class StoryStateManager:
             self._state.character_mood = ai_response["mood"]
         if "location" in ai_response:
             self._state.location = ai_response["location"]
+
+        # trust_level — clamp to [-3, 3]; carries across chapters
+        if "trust_level" in ai_response:
+            raw = ai_response["trust_level"]
+            if isinstance(raw, int):
+                self._state.trust_level = max(-3, min(3, raw))
+
+        # tension — overwrite each turn when present
+        if "tension" in ai_response:
+            self._state.tension = ai_response["tension"]
+
+        # characters_present — overwrite (not append) when present
+        if "characters_present" in ai_response:
+            cp = ai_response["characters_present"]
+            if isinstance(cp, list):
+                self._state.characters_present = list(cp[: self._CHARACTERS_PRESENT_CAP])
+
+        # active_props — cumulative merge, dedup, cap at 10 (drop oldest over limit)
+        if "active_props" in ai_response:
+            new_props = ai_response["active_props"]
+            if isinstance(new_props, list):
+                combined = list(self._state.active_props)
+                for prop in new_props:
+                    if prop not in combined:
+                        combined.append(prop)
+                # Drop oldest entries if over the cap
+                self._state.active_props = combined[-self._ACTIVE_PROPS_CAP :]
+
+        # key_event — append to key_events if new; also drives recent_turns
+        key_event: str | None = None
         if "key_event" in ai_response:
             event = ai_response["key_event"]
             if event and event not in self._state.key_events:
                 self._state.key_events.append(event)
+            if event:
+                key_event = event
+
+        # recent_turns — FIFO, max 3 entries
+        if key_event:
+            summary = key_event
+        else:
+            reply = ai_response.get("reply", "")
+            if isinstance(reply, list):
+                first = reply[0] if reply else {}
+                reply_text = first.get("text", "") if isinstance(first, dict) else ""
+            else:
+                reply_text = str(reply) if reply else ""
+            summary = reply_text[:80]
+
+        if summary:
+            self._state.recent_turns.append(summary)
+            if len(self._state.recent_turns) > self._RECENT_TURNS_CAP:
+                self._state.recent_turns = self._state.recent_turns[-self._RECENT_TURNS_CAP :]
 
     def should_nudge_ending(self) -> bool:
         """Whether to inject an ending-nudge into the context."""
@@ -166,6 +266,9 @@ class StoryStateManager:
 
         Returns True if advanced successfully, False if the story is over
         (no more chapters).
+
+        Resets on advance: characters_present, recent_turns.
+        Carries across: trust_level, active_props, key_events.
         """
         if self.is_last_chapter():
             self._state.story_ended = True
@@ -173,6 +276,10 @@ class StoryStateManager:
 
         self._state.current_chapter_index += 1
         self._state.turn_count = 0
+
+        # Reset per-chapter fields
+        self._state.characters_present = []
+        self._state.recent_turns = []
 
         next_ch = self.current_chapter()
         if next_ch:

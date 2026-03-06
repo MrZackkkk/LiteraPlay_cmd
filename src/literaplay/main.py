@@ -17,7 +17,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
-from literaplay.ai_service import AIService, validate_api_key_with_available_sdk
+from literaplay.ai_service import AIService, APIOverloadedError, validate_api_key_with_available_sdk
 from literaplay.data import LIBRARY
 from literaplay.response_parser import parse_ai_json_response, validate_story_response
 from literaplay.story_state import StoryStateManager
@@ -48,6 +48,7 @@ def _build_library_json() -> str:
 class AIChatWorker(QThread):
     response_signal = Signal(dict)
     error_signal = Signal(str)
+    overload_signal = Signal()
 
     def __init__(self, ai_service, chat_session, user_text, context_injection=""):
         super().__init__()
@@ -88,7 +89,10 @@ class AIChatWorker(QThread):
                 )
         except Exception as e:
             logging.exception("AIChatWorker encountered an error")
-            self.error_signal.emit(str(e))
+            if isinstance(e, APIOverloadedError):
+                self.overload_signal.emit()
+            else:
+                self.error_signal.emit(str(e))
 
 
 class APIVerifyWorker(QThread):
@@ -140,6 +144,7 @@ class BackendBridge(QObject):
     chatOptionsUpdated = Signal(str)  # JSON string — QWebChannel cannot serialize Python lists
     chatStarted = Signal(str, str)  # intro, first_message
     chatError = Signal(str)
+    chatOverloaded = Signal()
     chatEnded = Signal(str)  # final narrative text
     loadingStateChanged = Signal(bool)
     storyProgressUpdated = Signal(str)  # JSON: chapter_title, turn, progress_pct
@@ -311,6 +316,7 @@ class BackendBridge(QObject):
         self.worker = AIChatWorker(self.ai_service, self.chat_session, text, context)
         self.worker.response_signal.connect(self._on_chat_response_worker)
         self.worker.error_signal.connect(self._on_chat_error_worker)
+        self.worker.overload_signal.connect(self._on_chat_overload_worker)
         self._track_worker(self.worker)
         self.worker.start()
 
@@ -384,6 +390,11 @@ class BackendBridge(QObject):
     def _on_chat_error_worker(self, message):
         self.loadingStateChanged.emit(False)
         self.chatError.emit(message)
+
+    @Slot()
+    def _on_chat_overload_worker(self):
+        self.loadingStateChanged.emit(False)
+        self.chatOverloaded.emit()
 
 
 # ================== MAIN APP ==================

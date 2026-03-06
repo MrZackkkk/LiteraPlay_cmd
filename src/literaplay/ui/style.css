@@ -305,6 +305,20 @@ button {
     gap: 12px;
 }
 
+/* Overload modal */
+#overload-modal .dialog {
+    text-align: center;
+}
+
+.overload-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+#overload-modal .dialog-actions {
+    justify-content: center;
+}
+
 /* ================== MENU SCREEN ================== */
 .menu-header {
     padding: 40px 40px 16px;

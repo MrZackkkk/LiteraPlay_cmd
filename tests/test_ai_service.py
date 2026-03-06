@@ -3,7 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 
-from literaplay.ai_service import AIService, _sanitize_api_error
+from literaplay.ai_service import AIService, APIOverloadedError, _sanitize_api_error
 
 
 class TestAIService(unittest.TestCase):
@@ -117,6 +117,49 @@ class TestAIService(unittest.TestCase):
         sent_text = mock_chat_session.send_message.call_args[0][0]
         self.assertEqual(sent_text, "Hello")
         self.assertNotIn("[CONTEXT]", sent_text)
+
+
+    @patch("literaplay.ai_service._interruptible_sleep")
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_raises_overload_after_max_retries(self, mock_client_cls, mock_sleep):
+        service = AIService(self.api_key, self.model_name)
+        mock_chat_session = MagicMock()
+        mock_chat_session.send_message.side_effect = Exception("429 Resource Exhausted")
+
+        with self.assertRaises(APIOverloadedError):
+            service.send_message(mock_chat_session, "Hello")
+
+        self.assertEqual(mock_chat_session.send_message.call_count, 3)
+
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_non_overload_error_raises_immediately(self, mock_client_cls):
+        service = AIService(self.api_key, self.model_name)
+        mock_chat_session = MagicMock()
+        mock_chat_session.send_message.side_effect = ValueError("Something else broke")
+
+        with self.assertRaises(ValueError):
+            service.send_message(mock_chat_session, "Hello")
+
+        self.assertEqual(mock_chat_session.send_message.call_count, 1)
+
+    @patch("literaplay.ai_service._interruptible_sleep")
+    @patch("literaplay.ai_service.genai.Client")
+    def test_send_message_retry_callback_has_bulgarian_text(self, mock_client_cls, mock_sleep):
+        service = AIService(self.api_key, self.model_name)
+        mock_chat_session = MagicMock()
+
+        error_429 = Exception("429 Resource Exhausted")
+        mock_response = MagicMock()
+        mock_response.text = "OK"
+        mock_chat_session.send_message.side_effect = [error_429, mock_response]
+
+        callback = MagicMock()
+        service.send_message(mock_chat_session, "Hello", status_callback=callback)
+
+        callback.assert_called_once()
+        msg = callback.call_args[0][0]
+        self.assertIn("Претоварен", msg)
+        self.assertIn("1/3", msg)
 
 
 class TestSanitizeApiError(unittest.TestCase):

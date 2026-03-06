@@ -1,7 +1,21 @@
 import json
+import logging
+import re
 from typing import Any
 
 from literaplay.story_state import ChapterDef, StoryState
+
+_log = logging.getLogger(__name__)
+
+_MAX_KEY_EVENT_CHARS = 120
+_MAX_CHARACTERS_PRESENT = 8
+_MAX_ACTIVE_PROPS = 10
+_MAX_PROP_CHARS = 60
+# Minimum prefix length used for fuzzy token matching (handles inflected Bulgarian words)
+_STEM_PREFIX_LEN = 4
+
+# Pre-compiled pattern for stripping non-word characters when comparing location tokens
+_NON_WORD_RE = re.compile(r"[^\w\s]")
 
 
 def parse_ai_json_response(response_text: str) -> dict[str, Any] | None:
@@ -109,5 +123,61 @@ def validate_story_response(
     if not result.get("ended") and not result.get("_chapter_ended") and len(options) == 0:
         options = list(_FALLBACK_OPTIONS)
     result["options"] = options
+
+    # --- location drift ---
+    if chapter is not None and "location" in result:
+        ai_location = result["location"]
+        if isinstance(ai_location, str):
+            # Extract tokens longer than 2 chars, then compare by _STEM_PREFIX_LEN-char prefix
+            # to handle Bulgarian inflections (e.g. "Оборът" vs "обора" both share "обор").
+            def _stem_set(text: str) -> set[str]:
+                return {
+                    w.lower()[:_STEM_PREFIX_LEN]
+                    for w in _NON_WORD_RE.sub("", text).split()
+                    if len(w) > 2
+                }
+
+            setting_stems = _stem_set(chapter.setting)
+            location_stems = _stem_set(ai_location)
+            if not setting_stems.intersection(location_stems):
+                _log.warning(
+                    "Location drift detected: AI returned %r but chapter setting is %r — reverting.",
+                    ai_location,
+                    chapter.setting,
+                )
+                result["location"] = chapter.setting
+
+    # --- key_event dedup and cap ---
+    if "key_event" in result:
+        event = result["key_event"]
+        if isinstance(event, str):
+            event = event[:_MAX_KEY_EVENT_CHARS]
+            result["key_event"] = event
+            if state is not None and event in state.key_events:
+                del result["key_event"]
+        else:
+            del result["key_event"]
+
+    # --- characters_present ---
+    if "characters_present" in result:
+        cp = result["characters_present"]
+        if not isinstance(cp, list) or not all(isinstance(x, str) for x in cp):
+            del result["characters_present"]
+        else:
+            result["characters_present"] = cp[:_MAX_CHARACTERS_PRESENT]
+
+    # --- trust_level ---
+    if "trust_level" in result:
+        tl = result["trust_level"]
+        if not isinstance(tl, int) or not (-3 <= tl <= 3):
+            del result["trust_level"]
+
+    # --- active_props ---
+    if "active_props" in result:
+        ap = result["active_props"]
+        if not isinstance(ap, list) or not all(isinstance(x, str) for x in ap):
+            del result["active_props"]
+        else:
+            result["active_props"] = [p[:_MAX_PROP_CHARS] for p in ap][:_MAX_ACTIVE_PROPS]
 
     return result

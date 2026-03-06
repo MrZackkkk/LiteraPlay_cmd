@@ -1,6 +1,6 @@
 import unittest
 
-from literaplay.story_state import ChapterDef, StoryStateManager
+from literaplay.story_state import ChapterDef, StoryState, StoryStateManager
 
 _SAMPLE_CHAPTERS = [
     {
@@ -152,6 +152,177 @@ class TestStoryStateManager(unittest.TestCase):
         info = self.manager.get_progress_info()
         self.assertGreater(info["progress_pct"], 0)
 
+
+class TestNewStateFields(unittest.TestCase):
+    def setUp(self):
+        self.manager = StoryStateManager(_SAMPLE_WORK)
+
+    # --- default values ---
+
+    def test_new_fields_default_values(self):
+        state = self.manager.get_state()
+        self.assertEqual(state.trust_level, 0)
+        self.assertEqual(state.tension, "")
+        self.assertEqual(state.characters_present, [])
+        self.assertEqual(state.active_props, [])
+        self.assertEqual(state.recent_turns, [])
+
+    # --- trust_level ---
+
+    def test_record_turn_sets_trust_level(self):
+        self.manager.record_turn({"reply": "hi", "trust_level": 2})
+        self.assertEqual(self.manager.get_state().trust_level, 2)
+
+    def test_record_turn_clamps_trust_level_high(self):
+        self.manager.record_turn({"reply": "hi", "trust_level": 99})
+        self.assertEqual(self.manager.get_state().trust_level, 3)
+
+    def test_record_turn_clamps_trust_level_low(self):
+        self.manager.record_turn({"reply": "hi", "trust_level": -99})
+        self.assertEqual(self.manager.get_state().trust_level, -3)
+
+    def test_record_turn_ignores_non_int_trust_level(self):
+        self.manager.record_turn({"reply": "hi", "trust_level": "high"})
+        self.assertEqual(self.manager.get_state().trust_level, 0)
+
+    # --- tension ---
+
+    def test_record_turn_sets_tension(self):
+        self.manager.record_turn({"reply": "hi", "tension": "armed standoff"})
+        self.assertEqual(self.manager.get_state().tension, "armed standoff")
+
+    def test_record_turn_overwrites_tension(self):
+        self.manager.record_turn({"reply": "a", "tension": "first"})
+        self.manager.record_turn({"reply": "b", "tension": "second"})
+        self.assertEqual(self.manager.get_state().tension, "second")
+
+    # --- characters_present ---
+
+    def test_record_turn_sets_characters_present(self):
+        self.manager.record_turn({"reply": "hi", "characters_present": ["Марко", "Иван"]})
+        self.assertEqual(self.manager.get_state().characters_present, ["Марко", "Иван"])
+
+    def test_record_turn_overwrites_characters_present(self):
+        self.manager.record_turn({"reply": "a", "characters_present": ["A", "B"]})
+        self.manager.record_turn({"reply": "b", "characters_present": ["C"]})
+        self.assertEqual(self.manager.get_state().characters_present, ["C"])
+
+    # --- active_props ---
+
+    def test_record_turn_accumulates_active_props(self):
+        self.manager.record_turn({"reply": "a", "active_props": ["пищов"]})
+        self.manager.record_turn({"reply": "b", "active_props": ["фенер"]})
+        self.assertIn("пищов", self.manager.get_state().active_props)
+        self.assertIn("фенер", self.manager.get_state().active_props)
+
+    def test_record_turn_deduplicates_active_props(self):
+        self.manager.record_turn({"reply": "a", "active_props": ["пищов"]})
+        self.manager.record_turn({"reply": "b", "active_props": ["пищов", "фенер"]})
+        self.assertEqual(self.manager.get_state().active_props.count("пищов"), 1)
+
+    def test_record_turn_caps_active_props_at_10(self):
+        for i in range(12):
+            self.manager.record_turn({"reply": "x", "active_props": [f"prop_{i}"]})
+        self.assertLessEqual(len(self.manager.get_state().active_props), 10)
+
+    # --- recent_turns ---
+
+    def test_record_turn_adds_to_recent_turns(self):
+        self.manager.record_turn({"reply": "hello world"})
+        self.assertEqual(len(self.manager.get_state().recent_turns), 1)
+
+    def test_record_turn_recent_turns_max_3(self):
+        for i in range(5):
+            self.manager.record_turn({"reply": f"message {i}"})
+        self.assertEqual(len(self.manager.get_state().recent_turns), 3)
+
+    def test_record_turn_recent_turns_fifo(self):
+        for i in range(4):
+            self.manager.record_turn({"reply": f"msg{i}"})
+        # Only the last 3 should remain
+        state = self.manager.get_state()
+        self.assertNotIn("msg0", state.recent_turns[0])
+        self.assertEqual(len(state.recent_turns), 3)
+
+    def test_record_turn_key_event_goes_to_recent_turns(self):
+        self.manager.record_turn({"reply": "some reply", "key_event": "hero revealed"})
+        self.assertIn("hero revealed", self.manager.get_state().recent_turns)
+
+    def test_record_turn_list_reply_uses_first_text_for_recent_turns(self):
+        reply = [{"character": "Марко", "text": "Кой е там?"}]
+        self.manager.record_turn({"reply": reply})
+        self.assertIn("Кой е там?", self.manager.get_state().recent_turns[0])
+
+    # --- advance_chapter resets / carries ---
+
+    def test_advance_chapter_resets_characters_present(self):
+        self.manager.record_turn({"reply": "a", "characters_present": ["A", "B"]})
+        self.manager.advance_chapter()
+        self.assertEqual(self.manager.get_state().characters_present, [])
+
+    def test_advance_chapter_resets_recent_turns(self):
+        self.manager.record_turn({"reply": "some text"})
+        self.manager.advance_chapter()
+        self.assertEqual(self.manager.get_state().recent_turns, [])
+
+    def test_advance_chapter_preserves_trust_level(self):
+        self.manager.record_turn({"reply": "a", "trust_level": 2})
+        self.manager.advance_chapter()
+        self.assertEqual(self.manager.get_state().trust_level, 2)
+
+    def test_advance_chapter_preserves_active_props(self):
+        self.manager.record_turn({"reply": "a", "active_props": ["пищов"]})
+        self.manager.advance_chapter()
+        self.assertIn("пищов", self.manager.get_state().active_props)
+
+    # --- build_context_injection labels ---
+
+    def test_context_contains_trust_label(self):
+        self.manager.record_turn({"reply": "a", "trust_level": -3})
+        ctx = self.manager.build_context_injection()
+        self.assertIn("Trust toward", ctx)
+        self.assertIn("hostile", ctx)
+
+    def test_context_trust_neutral(self):
+        ctx = self.manager.build_context_injection()
+        self.assertIn("neutral", ctx)
+
+    def test_context_trust_devoted(self):
+        self.manager.record_turn({"reply": "a", "trust_level": 3})
+        ctx = self.manager.build_context_injection()
+        self.assertIn("devoted", ctx)
+
+    def test_context_contains_tension(self):
+        self.manager.record_turn({"reply": "a", "tension": "armed standoff"})
+        ctx = self.manager.build_context_injection()
+        self.assertIn("Tension:", ctx)
+        self.assertIn("armed standoff", ctx)
+
+    def test_context_contains_characters_present(self):
+        self.manager.record_turn({"reply": "a", "characters_present": ["Марко"]})
+        ctx = self.manager.build_context_injection()
+        self.assertIn("Characters present:", ctx)
+        self.assertIn("Марко", ctx)
+
+    def test_context_contains_active_props(self):
+        self.manager.record_turn({"reply": "a", "active_props": ["пищов"]})
+        ctx = self.manager.build_context_injection()
+        self.assertIn("Active props:", ctx)
+        self.assertIn("пищов", ctx)
+
+    def test_context_contains_recent_turns(self):
+        self.manager.record_turn({"reply": "some text here"})
+        ctx = self.manager.build_context_injection()
+        self.assertIn("Recent turns:", ctx)
+        self.assertIn("some text here", ctx)
+
+    def test_context_contains_knowledge_boundaries(self):
+        ctx = self.manager.build_context_injection()
+        self.assertIn("KNOWLEDGE BOUNDARIES:", ctx)
+
+
+# Re-export StoryState so the import at the top is used (avoids F401 from ruff)
+_STATE_CLASS = StoryState
 
 
 if __name__ == "__main__":

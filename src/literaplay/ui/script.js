@@ -51,6 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
         backend.chatStarted.connect(handleChatStarted);
         backend.loadingStateChanged.connect(toggleLoading);
         backend.chatError.connect((msg) => _renderChatMessage("System", "Грешка: " + msg, false, true));
+        backend.chatOverloaded.connect(showOverloadModal);
         backend.chatEnded.connect(handleChatEnded);
 
         backend.chapterTransition.connect(handleChapterTransition);
@@ -139,6 +140,10 @@ function setupEventListeners() {
 
     // Keyboard shortcuts: press 1–9 to click the corresponding option button
     document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !document.getElementById("overload-modal").classList.contains("hidden")) {
+            hideOverloadModal();
+            return;
+        }
         if (document.getElementById("chat-screen").classList.contains("hidden")) return;
         if (document.activeElement === document.getElementById("chat-input")) return;
         const num = parseInt(e.key);
@@ -150,6 +155,8 @@ function setupEventListeners() {
             }
         }
     });
+
+    document.getElementById("btn-overload-dismiss").addEventListener("click", hideOverloadModal);
 
     setupCustomSelect();
     updateSendButton();
@@ -550,6 +557,14 @@ function sendInputMsg() {
     document.getElementById("chat-options").innerHTML = "";
 
     backend.send_user_message(text);
+}
+
+function showOverloadModal() {
+    document.getElementById("overload-modal").classList.remove("hidden");
+}
+
+function hideOverloadModal() {
+    document.getElementById("overload-modal").classList.add("hidden");
 }
 
 function toggleLoading(isLoading) {
