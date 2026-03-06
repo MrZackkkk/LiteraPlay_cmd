@@ -5,6 +5,8 @@
     --border: rgba(255, 255, 255, 0.1);
     --border-hover: rgba(255, 255, 255, 0.2);
 
+    --chat-font-size: 16px;
+
     --text-primary: #f8fafc;
     --text-secondary: #a1a1aa;
 
@@ -568,7 +570,7 @@ button {
 
 .bubble {
     padding: 14px 20px;
-    font-size: 16px;
+    font-size: var(--chat-font-size, 16px);
     line-height: 1.5;
     border-radius: 20px;
 }
@@ -746,4 +748,166 @@ button {
     100% {
         transform: translate(5%, 10%) scale(1.1);
     }
+}
+
+/* ================== CHAT ENHANCEMENTS ================== */
+
+/* Entrance animation for the chat screen */
+@keyframes chatEnter {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+#chat-screen:not(.hidden) {
+    animation: chatEnter 0.25s ease-out;
+}
+
+/* Scroll-to-bottom floating button */
+.btn-scroll-bottom {
+    position: absolute;
+    bottom: 148px;
+    right: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--border-hover);
+    color: var(--text-primary);
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-scroll-bottom:hover {
+    background: var(--surface-hover);
+    transform: translateY(-2px);
+}
+
+/* Message footer: timestamp + copy button */
+.msg-footer {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 10px 0;
+}
+
+.msg-timestamp {
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+}
+
+.msg-wrapper:hover .msg-timestamp {
+    opacity: 1;
+}
+
+/* Copy-to-clipboard button on AI messages */
+.btn-copy {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    padding: 1px 5px;
+    border-radius: 5px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+    font-family: 'Inter', sans-serif;
+    font-weight: 400;
+    line-height: 1;
+}
+
+.msg-wrapper:hover .btn-copy {
+    opacity: 1;
+}
+
+.btn-copy:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+}
+
+/* Keyboard shortcut badge on option buttons */
+.option-key-hint {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    margin-right: 10px;
+    flex-shrink: 0;
+    vertical-align: middle;
+}
+
+/* Font size controls in chat header */
+.font-controls {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.btn-icon-sm {
+    background: rgba(24, 24, 27, 0.5);
+    color: var(--text-secondary);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: 'Inter', sans-serif;
+    line-height: 1;
+}
+
+.btn-icon-sm:hover {
+    background: var(--surface-hover);
+    color: var(--text-primary);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+/* Right-side group in chat header */
+.chat-header-right {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Markdown elements inside AI bubbles */
+.bubble strong {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.bubble em {
+    font-style: italic;
+    color: #c4c4d0;
+}
+
+.bubble blockquote.md-quote {
+    border-left: 3px solid var(--border-hover);
+    padding-left: 12px;
+    color: var(--text-secondary);
+    font-style: italic;
+    margin: 6px 0;
+    display: block;
 }

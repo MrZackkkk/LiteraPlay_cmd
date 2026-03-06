@@ -204,6 +204,10 @@ class BackendBridge(QObject):
             self.apiValidationResult.emit(False, str(e))
 
     @Slot(str)
+    def copy_to_clipboard(self, text):
+        QApplication.clipboard().setText(text)
+
+    @Slot(str)
     def save_model(self, model_name):
         config.save_model_name(model_name)
         if config.API_KEY:
