@@ -67,7 +67,7 @@
                 <p class="subtitle" id="api-card-subtitle">Enter your API key to power the experience.</p>
 
                 <div class="input-group">
-                    <input type="password" id="api-key-input" placeholder="API Key..." />
+                    <input type="password" id="api-key-input" placeholder="API Key..." aria-label="API Key" />
                 </div>
 
                 <p class="api-hint" id="api-hint"></p>
@@ -102,7 +102,7 @@
                     <h1 class="main-title">Избери произведение</h1>
                     <p class="subtitle mt-2">Потопи се в диалог с легендарни герои – динамично, стилно и живо.</p>
                 </div>
-                <button id="btn-open-settings" class="btn-icon">
+                <button id="btn-open-settings" class="btn-icon" aria-label="Настройки" title="Настройки">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -123,7 +123,7 @@
     <!-- ================== SCREEN 2A: SETTINGS ================== -->
     <div id="settings-screen" class="screen hidden layout-column">
         <header class="menu-header" style="padding-bottom: 0;">
-            <button id="btn-close-settings" class="btn-icon mb-4">
+            <button id="btn-close-settings" class="btn-icon mb-4" aria-label="Назад" title="Назад">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -164,7 +164,7 @@
     <!-- ================== SCREEN 2B: SITUATION SELECT ================== -->
     <div id="situation-screen" class="screen hidden layout-column">
         <header class="menu-header" style="padding-bottom: 0;">
-            <button id="btn-sit-back" class="btn-icon mb-4">
+            <button id="btn-sit-back" class="btn-icon mb-4" aria-label="Назад" title="Назад">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -188,7 +188,7 @@
     <!-- ================== SCREEN 3: CHAT ================== -->
     <div id="chat-screen" class="screen hidden layout-column">
         <header class="chat-header glass-header">
-            <button id="btn-back" class="btn-icon">
+            <button id="btn-back" class="btn-icon" aria-label="Меню" title="Меню">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -199,10 +199,10 @@
             <h2 id="chat-title" class="chat-title">Име на Героя</h2>
             <div class="chat-header-right">
                 <div class="font-controls">
-                    <button id="btn-font-decrease" class="btn-icon-sm" title="Намали текста">A−</button>
-                    <button id="btn-font-increase" class="btn-icon-sm" title="Увеличи текста">A+</button>
+                <button id="btn-font-decrease" class="btn-icon-sm" aria-label="Намали текста" title="Намали текста">A−</button>
+                <button id="btn-font-increase" class="btn-icon-sm" aria-label="Увеличи текста" title="Увеличи текста">A+</button>
                 </div>
-                <button id="btn-chat-settings" class="btn-icon" title="Настройки">
+            <button id="btn-chat-settings" class="btn-icon" aria-label="Настройки" title="Настройки">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -234,8 +234,8 @@
             </div>
 
             <div class="input-area glass-input">
-                <input type="text" id="chat-input" placeholder="Напиши нещо..." autocomplete="off" />
-                <button id="btn-send" class="btn-send">
+                <input type="text" id="chat-input" placeholder="Напиши нещо..." aria-label="Напиши нещо..." autocomplete="off" />
+                <button id="btn-send" class="btn-send" aria-label="Изпрати" title="Изпрати">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
