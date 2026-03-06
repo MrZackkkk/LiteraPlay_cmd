@@ -19,17 +19,32 @@
 
     <!-- ================== SCREEN 1: API SETUP ================== -->
     <div id="api-screen" class="screen flex-center">
-        <div class="glass-card api-card">
-            <h1>Welcome to LiteraPlay.</h1>
-            <p class="subtitle">Please enter your Google Gemini API Key to start.</p>
+        <div class="api-watermark" aria-hidden="true">Под игото / Немили-недраги / Тютюн</div>
 
-            <div class="input-group">
-                <input type="password" id="api-key-input" placeholder="API Key..." />
+        <div class="api-landing-wrapper">
+            <!-- Hero intro -->
+            <div class="api-hero">
+                <span class="badge api-anim api-anim-0">✦ LITERAPLAY</span>
+                <h1 class="main-title api-hero-title api-anim api-anim-1">Step into the story.</h1>
+                <p class="subtitle api-hero-subtitle api-anim api-anim-2">Relive scenes from Bulgarian literary classics through conversation with the characters who shaped them.</p>
+                <div class="api-hero-divider api-anim api-anim-3"></div>
             </div>
 
-            <div class="action-row">
-                <p id="api-status"></p>
-                <button id="btn-verify" class="btn-primary">Verify & Save</button>
+            <!-- API key card -->
+            <div class="glass-card api-card api-anim api-anim-4">
+                <h1>Connect your AI</h1>
+                <p class="subtitle">Enter a Google Gemini API key to power the experience.</p>
+
+                <div class="input-group">
+                    <input type="password" id="api-key-input" placeholder="API Key..." />
+                </div>
+
+                <p class="api-hint">Free tier available at ai.google.dev</p>
+
+                <div class="action-row">
+                    <p id="api-status"></p>
+                    <button id="btn-verify" class="btn-primary">Verify & Save</button>
+                </div>
             </div>
         </div>
 
