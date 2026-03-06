@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
         backend.loadingStateChanged.connect(toggleLoading);
         backend.chatError.connect((msg) => _renderChatMessage("System", "Грешка: " + msg, false, true));
         backend.chatEnded.connect(handleChatEnded);
-        backend.storyProgressUpdated.connect(handleStoryProgress);
+
         backend.chapterTransition.connect(handleChapterTransition);
         backend.currentModel.connect(handleCurrentModel);
 
@@ -386,11 +386,6 @@ function startChat(workKey, sitKey) {
 
     showScreen("chat");
 
-    const prog = document.getElementById("story-progress");
-    prog.classList.add("hidden");
-    document.getElementById("chapter-label").innerText = "";
-    document.getElementById("progress-bar-fill").style.width = "0%";
-
     updateSendButton();
     backend.start_chat_session(workKey, sitKey);
 }
@@ -562,37 +557,28 @@ function toggleLoading(isLoading) {
     const ind = document.getElementById("typing-indicator");
     const input = document.getElementById("chat-input");
     const btn = document.getElementById("btn-send");
+    const statusEl = document.getElementById("status-indicator");
+    const statusLabel = document.getElementById("status-label");
 
     if (isLoading) {
         ind.classList.remove("hidden");
         ind.style.display = "block";
         input.disabled = true;
         btn.disabled = true;
+        statusEl.classList.add("busy");
+        statusLabel.textContent = "Мисли...";
     } else {
         ind.classList.add("hidden");
         ind.style.display = "none";
         input.disabled = false;
         updateSendButton();
         input.focus();
+        statusEl.classList.remove("busy");
+        statusLabel.textContent = "На линия";
     }
     document.getElementById("chat-history").scrollTop = document.getElementById("chat-history").scrollHeight;
 }
 
-function handleStoryProgress(jsonStr) {
-    try {
-        const info = JSON.parse(jsonStr);
-        const prog = document.getElementById("story-progress");
-        prog.classList.remove("hidden");
-
-        document.getElementById("chapter-label").innerText =
-            `${info.chapter_title}  (${info.chapter_index + 1}/${info.total_chapters})`;
-
-        document.getElementById("progress-bar-fill").style.width =
-            `${Math.min(info.progress_pct, 100)}%`;
-    } catch (e) {
-        console.error("Failed to parse story progress:", e);
-    }
-}
 
 function handleChapterTransition(chapterTitle) {
     _renderChatMessage("System", `— ${chapterTitle} —`, false, true);

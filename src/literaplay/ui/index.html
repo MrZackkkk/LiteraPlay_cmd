@@ -154,12 +154,6 @@
                 <span>Меню</span>
             </button>
             <h2 id="chat-title" class="chat-title">Име на Героя</h2>
-            <div id="story-progress" class="story-progress hidden">
-                <span id="chapter-label" class="chapter-label"></span>
-                <div class="progress-bar-track">
-                    <div id="progress-bar-fill" class="progress-bar-fill"></div>
-                </div>
-            </div>
             <div class="chat-header-right">
                 <div class="font-controls">
                     <button id="btn-font-decrease" class="btn-icon-sm" title="Намали текста">A−</button>
@@ -174,9 +168,9 @@
                         </path>
                     </svg>
                 </button>
-                <div class="status-indicator">
+                <div id="status-indicator" class="status-indicator">
                     <span class="dot"></span>
-                    <span>На линия</span>
+                    <span id="status-label">На линия</span>
                 </div>
             </div>
         </header>
