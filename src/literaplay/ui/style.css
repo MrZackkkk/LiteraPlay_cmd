@@ -961,6 +961,74 @@ button {
     width: 100%;
 }
 
+/* Provider picker */
+.provider-picker {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 24px;
+}
+
+.provider-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.provider-buttons {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+}
+
+.provider-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 28px;
+    background: rgba(24, 24, 27, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 120px;
+}
+
+.provider-btn:hover {
+    background: rgba(30, 30, 34, 0.6);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.4);
+}
+
+.provider-btn.selected {
+    border-color: rgba(255, 255, 255, 0.3);
+    background: rgba(59, 130, 246, 0.08);
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+.provider-logo {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.provider-name {
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* API card slide-in when provider is picked */
+.api-card-enter {
+    animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+}
+
 /* Help hint below input */
 .api-hint {
     font-size: 12px;

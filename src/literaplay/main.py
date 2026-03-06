@@ -17,7 +17,7 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
-from literaplay.ai_service import AIService, APIOverloadedError, validate_api_key_with_available_sdk
+from literaplay.ai_service import AIService, APIOverloadedError, validate_api_key
 from literaplay.data import LIBRARY
 from literaplay.response_parser import parse_ai_json_response, validate_story_response
 from literaplay.story_state import StoryStateManager
@@ -98,12 +98,13 @@ class AIChatWorker(QThread):
 class APIVerifyWorker(QThread):
     finished_signal = Signal(bool, str)
 
-    def __init__(self, key: str):
+    def __init__(self, provider: str, key: str):
         super().__init__()
+        self.provider = provider
         self.key = key
 
     def run(self):
-        is_valid, message = validate_api_key_with_available_sdk(self.key)
+        is_valid, message = validate_api_key(self.provider, self.key)
         self.finished_signal.emit(is_valid, message)
 
 
@@ -149,7 +150,9 @@ class BackendBridge(QObject):
     loadingStateChanged = Signal(bool)
     storyProgressUpdated = Signal(str)  # JSON: chapter_title, turn, progress_pct
     chapterTransition = Signal(str)  # chapter title for transition message
-    currentModel = Signal(str) # Let JS know the current active model
+    currentModel = Signal(str)  # Let JS know the current active model
+    currentProvider = Signal(str)  # Let JS know the current provider
+    providerModelsLoaded = Signal(str)  # JSON: {default, models[]}
 
     def __init__(self, app_window):
         super().__init__()
@@ -165,28 +168,32 @@ class BackendBridge(QObject):
         # finished workers are removed automatically via _cleanup_worker.
         self._active_workers: list = []
 
-        if config.API_KEY:
+        if config.API_KEY and config.PROVIDER:
             with contextlib.suppress(Exception):
-                self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
+                self.ai_service = AIService(config.PROVIDER, config.API_KEY, config.DEFAULT_MODEL)
 
     @Slot()
     def request_initial_state(self):
         """Called by JS when the page finishes loading."""
         self.currentModel.emit(config.DEFAULT_MODEL)
 
-        if config.API_KEY and self.ai_service:
+        if config.PROVIDER:
+            self.currentProvider.emit(config.PROVIDER)
+            self.providerModelsLoaded.emit(config.get_models_json(config.PROVIDER))
+
+        if config.API_KEY and config.PROVIDER and self.ai_service:
             # Skip straight to menu
             self.libraryLoaded.emit(_build_library_json())
         else:
             # JS stays on API screen by default
             pass
 
-    @Slot(str)
-    def verify_api_key(self, key):
+    @Slot(str, str)
+    def verify_api_key(self, provider, key):
         # Guard against concurrent verification requests
         if self.api_worker is not None and self.api_worker.isRunning():
             return
-        self.api_worker = APIVerifyWorker(key)
+        self.api_worker = APIVerifyWorker(provider, key)
         self.api_worker.finished_signal.connect(self._on_api_validation_worker_done)
         self._track_worker(self.api_worker)
         self.api_worker.start()
@@ -195,18 +202,36 @@ class BackendBridge(QObject):
     def _on_api_validation_worker_done(self, is_valid, message):
         self.apiValidationResult.emit(is_valid, message)
 
-    @Slot(str, bool)
-    def save_api_key_decision(self, key, should_save):
+    @Slot(str, str, bool)
+    def save_api_key_decision(self, provider, key, should_save):
         if should_save:
+            config.save_provider(provider)
             config.save_api_key(key)
         else:
+            config.PROVIDER = provider
             config.API_KEY = key
 
+        # Set default model for this provider if current model doesn't belong to it
+        provider_model_values = [m["value"] for m in config.PROVIDER_MODELS.get(provider, {}).get("models", [])]
+        if not config.DEFAULT_MODEL or config.DEFAULT_MODEL not in provider_model_values:
+            default_model = config.get_default_model_for_provider(provider)
+            config.DEFAULT_MODEL = default_model
+            if should_save:
+                config.save_model_name(default_model)
+
         try:
-            self.ai_service = AIService(key, config.DEFAULT_MODEL)
+            self.ai_service = AIService(provider, key, config.DEFAULT_MODEL)
+            self.currentModel.emit(config.DEFAULT_MODEL)
+            self.currentProvider.emit(provider)
+            self.providerModelsLoaded.emit(config.get_models_json(provider))
             self.libraryLoaded.emit(_build_library_json())
         except Exception as e:
             self.apiValidationResult.emit(False, str(e))
+
+    @Slot(str)
+    def set_provider(self, provider):
+        """Called by JS when user selects a provider on the landing screen."""
+        self.providerModelsLoaded.emit(config.get_models_json(provider))
 
     @Slot(str)
     def copy_to_clipboard(self, text):
@@ -215,11 +240,9 @@ class BackendBridge(QObject):
     @Slot(str)
     def save_model(self, model_name):
         config.save_model_name(model_name)
-        if config.API_KEY:
+        if config.API_KEY and config.PROVIDER:
             try:
-                # Re-initialize the service to apply the new model
-                self.ai_service = AIService(config.API_KEY, config.DEFAULT_MODEL)
-                # If a chat is active, recreate the session with the new model
+                self.ai_service = AIService(config.PROVIDER, config.API_KEY, config.DEFAULT_MODEL)
                 if self.current_work and self.chat_session:
                     self.chat_session = self.ai_service.create_chat(self.current_work["prompt"])
                 self.currentModel.emit(config.DEFAULT_MODEL)

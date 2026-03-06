@@ -5,10 +5,18 @@ let currentColor = "";
 let libraryData = {};
 // H-04: Cache the validated key at the moment it is confirmed valid.
 let _validatedApiKey = "";
+let _selectedProvider = "";
 
 let previousScreen = "menu";
 let currentFontSize = 16;
 let _isLoading = false;
+
+// Provider-specific hints shown below the API key input
+const PROVIDER_HINTS = {
+    openai: "Get your key at platform.openai.com",
+    gemini: "Free tier available at ai.google.dev",
+    anthropic: "Get your key at console.anthropic.com",
+};
 
 
 /** Escape HTML special characters to prevent XSS. */
@@ -56,6 +64,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         backend.chapterTransition.connect(handleChapterTransition);
         backend.currentModel.connect(handleCurrentModel);
+        backend.currentProvider.connect(handleCurrentProvider);
+        backend.providerModelsLoaded.connect(handleProviderModels);
 
         backend.request_initial_state();
     });
@@ -64,26 +74,31 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function setupEventListeners() {
+    // Provider buttons
+    document.querySelectorAll(".provider-btn").forEach(btn => {
+        btn.addEventListener("click", () => selectProvider(btn.dataset.provider));
+    });
+
     // API Screen
     document.getElementById("btn-verify").addEventListener("click", () => {
         const key = document.getElementById("api-key-input").value.trim();
-        if (!key) return;
+        if (!key || !_selectedProvider) return;
 
         document.getElementById("btn-verify").disabled = true;
         document.getElementById("btn-verify").innerText = "Checking...";
         document.getElementById("api-status").innerText = "Проверка на API ключ...";
         _validatedApiKey = "";
-        backend.verify_api_key(key);
+        backend.verify_api_key(_selectedProvider, key);
     });
 
     document.getElementById("btn-dialog-no").addEventListener("click", () => {
         document.getElementById("dialog-overlay").classList.add("hidden");
-        if (_validatedApiKey) backend.save_api_key_decision(_validatedApiKey, false);
+        if (_validatedApiKey) backend.save_api_key_decision(_selectedProvider, _validatedApiKey, false);
     });
 
     document.getElementById("btn-dialog-yes").addEventListener("click", () => {
         document.getElementById("dialog-overlay").classList.add("hidden");
-        if (_validatedApiKey) backend.save_api_key_decision(_validatedApiKey, true);
+        if (_validatedApiKey) backend.save_api_key_decision(_selectedProvider, _validatedApiKey, true);
     });
 
     // Situation Screen
@@ -158,8 +173,96 @@ function setupEventListeners() {
 
     document.getElementById("btn-overload-dismiss").addEventListener("click", hideOverloadModal);
 
-    setupCustomSelect();
     updateSendButton();
+}
+
+// === Provider Selection ===
+
+function selectProvider(provider) {
+    _selectedProvider = provider;
+
+    // Highlight selected button
+    document.querySelectorAll(".provider-btn").forEach(btn => {
+        btn.classList.toggle("selected", btn.dataset.provider === provider);
+    });
+
+    // Show the API card with animation
+    const apiCard = document.getElementById("api-card");
+    apiCard.classList.remove("hidden");
+    apiCard.classList.add("api-card-enter");
+
+    // Update card text for the chosen provider
+    const names = { openai: "OpenAI", gemini: "Google Gemini", anthropic: "Anthropic Claude" };
+    document.getElementById("api-card-subtitle").textContent =
+        `Enter your ${names[provider] || provider} API key to power the experience.`;
+
+    // Update hint
+    document.getElementById("api-hint").textContent = PROVIDER_HINTS[provider] || "";
+
+    // Clear previous state
+    document.getElementById("api-key-input").value = "";
+    document.getElementById("api-status").innerText = "";
+    document.getElementById("api-key-input").focus();
+
+    // Tell backend about provider choice (for model list)
+    if (backend) backend.set_provider(provider);
+}
+
+// === Dynamic Model Picker ===
+
+let _providerModels = null;
+
+function handleProviderModels(jsonStr) {
+    try {
+        _providerModels = JSON.parse(jsonStr);
+    } catch (e) {
+        console.error("Failed to parse provider models:", e);
+        return;
+    }
+    rebuildModelPicker();
+}
+
+function rebuildModelPicker() {
+    if (!_providerModels || !_providerModels.models) return;
+
+    const hiddenInput = document.getElementById("model-picker");
+    const selectContainer = document.getElementById("custom-model-select");
+    if (!selectContainer || !hiddenInput) return;
+
+    const selected = selectContainer.querySelector(".select-selected");
+    const itemsContainer = selectContainer.querySelector(".select-items");
+    if (!selected || !itemsContainer) return;
+
+    // Clear existing options
+    itemsContainer.innerHTML = "";
+
+    const currentValue = hiddenInput.value;
+    let matchedLabel = "";
+
+    _providerModels.models.forEach(model => {
+        const div = document.createElement("div");
+        div.setAttribute("data-value", model.value);
+        div.textContent = model.label;
+        if (model.value === currentValue) {
+            div.classList.add("same-as-selected");
+            matchedLabel = model.label;
+        }
+        itemsContainer.appendChild(div);
+    });
+
+    // If current value doesn't match any model, select the default
+    if (!matchedLabel && _providerModels.default) {
+        hiddenInput.value = _providerModels.default;
+        const defaultModel = _providerModels.models.find(m => m.value === _providerModels.default);
+        matchedLabel = defaultModel ? defaultModel.label : _providerModels.default;
+        const defaultDiv = itemsContainer.querySelector(`[data-value="${_providerModels.default}"]`);
+        if (defaultDiv) defaultDiv.classList.add("same-as-selected");
+    }
+
+    selected.textContent = matchedLabel || "Select a model";
+
+    // Re-bind click handlers on the new options
+    setupCustomSelect();
 }
 
 function changeFontSize(delta) {
@@ -199,14 +302,18 @@ function setupCustomSelect() {
 
     if (!selected || !items || !hiddenInput) return;
 
-    selected.addEventListener("click", function (e) {
+    // Remove old listeners by cloning
+    const newSelected = selected.cloneNode(true);
+    selected.parentNode.replaceChild(newSelected, selected);
+
+    newSelected.addEventListener("click", function (e) {
         e.stopPropagation();
         this.classList.toggle("select-arrow-active");
         items.classList.toggle("select-hide");
 
         // Flip the dropdown upward if there isn't enough space below
         if (!items.classList.contains("select-hide")) {
-            const rect = selected.getBoundingClientRect();
+            const rect = newSelected.getBoundingClientRect();
             const spaceBelow = window.innerHeight - rect.bottom;
             const itemsHeight = items.scrollHeight + 16;
             if (spaceBelow < itemsHeight) {
@@ -227,17 +334,17 @@ function setupCustomSelect() {
             e.stopPropagation();
             hiddenInput.value = this.getAttribute("data-value");
             // M-05: Use textContent (not innerHTML) to avoid XSS from model names
-            selected.textContent = this.textContent;
+            newSelected.textContent = this.textContent;
             options.forEach(opt => opt.classList.remove("same-as-selected"));
             this.classList.add("same-as-selected");
-            selected.classList.remove("select-arrow-active");
+            newSelected.classList.remove("select-arrow-active");
             items.classList.add("select-hide");
         });
     });
 
     document.addEventListener("click", function (e) {
-        if (e.target !== selected && e.target !== items) {
-            selected.classList.remove("select-arrow-active");
+        if (e.target !== newSelected && e.target !== items) {
+            newSelected.classList.remove("select-arrow-active");
             items.classList.add("select-hide");
         }
     });
@@ -268,6 +375,14 @@ function handleApiValidation(isValid, message) {
         document.getElementById("api-status").style.color = "var(--error)";
         document.getElementById("api-status").innerText = message;
     }
+}
+
+function handleCurrentProvider(provider) {
+    _selectedProvider = provider;
+    // Highlight the provider button if on api screen
+    document.querySelectorAll(".provider-btn").forEach(btn => {
+        btn.classList.toggle("selected", btn.dataset.provider === provider);
+    });
 }
 
 function handleCurrentModel(modelName) {
