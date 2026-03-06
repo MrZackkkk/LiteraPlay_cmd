@@ -1,0 +1,3 @@
+## 2024-05-24 - Missing ARIA Labels on Icon Buttons and Inputs
+**Learning:** Found a common pattern of missing `aria-label` attributes on icon-only interactive elements (like the chat send button and settings toggles) and input fields without associated labels in the Qt WebEngine UI. This makes these elements opaque to screen reader users, violating accessibility guidelines.
+**Action:** When working on UI templates in this project, explicitly check for and add `aria-label` and `title` attributes to all icon-only buttons, and ensure input fields have an accessible label via `aria-label` or `<label>` to improve screen reader compatibility.
