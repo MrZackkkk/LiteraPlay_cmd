@@ -152,6 +152,36 @@ class TestStoryStateManager(unittest.TestCase):
         info = self.manager.get_progress_info()
         self.assertGreater(info["progress_pct"], 0)
 
+    def test_advance_chapter_at_last_chapter_returns_false(self):
+        """advance_chapter at last chapter returns False and sets story_ended."""
+        self.manager.advance_chapter()  # go to ch2 (last)
+        result = self.manager.advance_chapter()  # try to go past last
+        self.assertFalse(result)
+        self.assertTrue(self.manager.get_state().story_ended)
+
+    def test_record_turn_without_chapters(self):
+        """record_turn works in no-chapters mode."""
+        mgr = StoryStateManager({"_key": "x", "title": "x"})
+        mgr.record_turn({"reply": "hello", "mood": "happy"})
+        state = mgr.get_state()
+        self.assertEqual(state.turn_count, 1)
+        self.assertEqual(state.character_mood, "happy")
+
+    def test_get_progress_info_at_last_turn(self):
+        """Progress at max turns of last chapter should be ~100%."""
+        self.manager.advance_chapter()  # go to ch2, max_turns=10
+        for _ in range(10):
+            self.manager.record_turn({"reply": "a"})
+        info = self.manager.get_progress_info()
+        self.assertAlmostEqual(info["progress_pct"], 100.0, places=0)
+
+    def test_get_progress_info_no_chapters(self):
+        """Progress info works without chapters."""
+        mgr = StoryStateManager({"_key": "x", "title": "x"})
+        info = mgr.get_progress_info()
+        self.assertEqual(info["total_chapters"], 1)
+        self.assertEqual(info["chapter_title"], "")
+
 
 class TestNewStateFields(unittest.TestCase):
     def setUp(self):

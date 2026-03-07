@@ -1,6 +1,7 @@
 import logging
 import re
 from collections.abc import Callable
+from typing import Any
 
 
 def _interruptible_sleep(ms: int) -> None:
@@ -43,6 +44,10 @@ IMPORTANT STRICT GUIDELINES:
 - **NO ANACHRONISTIC KNOWLEDGE**: Your character exists in a specific historical period. Do not reference events,
   technology, or social norms from after your time period.
 """
+
+
+_MAX_RETRIES = 3
+_INITIAL_RETRY_DELAY_S = 5
 
 
 class APIOverloadedError(Exception):
@@ -134,7 +139,7 @@ def validate_api_key_with_available_sdk(key: str) -> tuple[bool, str]:
 class ChatSession:
     """Provider-agnostic chat session wrapper."""
 
-    def __init__(self, provider: str, client, model: str, system_prompt: str):
+    def __init__(self, provider: str, client: Any, model: str, system_prompt: str):
         self.provider = provider
         self.client = client
         self.model = model
@@ -162,7 +167,6 @@ class ChatSession:
         if self.provider == "gemini":
             if self._gemini_chat is None:
                 self._init_gemini_chat()
-            assert self._gemini_chat is not None
             response = self._gemini_chat.send_message(text)
             return getattr(response, "text", "") or ""
 
@@ -232,21 +236,25 @@ class AIService:
             session._init_gemini_chat()
         return session
 
-    def send_message(self, chat_session: ChatSession, text: str, status_callback: Callable[[str], None] | None = None) -> str:
+    def send_message(
+        self, chat_session: ChatSession, text: str, status_callback: Callable[[str], None] | None = None
+    ) -> str:
         """Sends a message to the chat session and returns the response text.
         Handles rate limiting with retries."""
         if not chat_session:
             raise ValueError("Chat session is not active")
 
-        max_retries = 3
-        retry_delay = 5
+        max_retries = _MAX_RETRIES
+        retry_delay = _INITIAL_RETRY_DELAY_S
 
         for attempt in range(max_retries):
             try:
                 return chat_session.send_message(text)
             except Exception as e:
                 err_msg = str(e)
-                is_overload = "429" in err_msg or "503" in err_msg or "overloaded" in err_msg.lower() or "rate" in err_msg.lower()
+                is_overload = (
+                    "429" in err_msg or "503" in err_msg or "overloaded" in err_msg.lower() or "rate" in err_msg.lower()
+                )
                 if not is_overload:
                     logging.error("API Error: %s", e)
                     raise

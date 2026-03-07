@@ -91,7 +91,7 @@
                     <h1 class="main-title">Избери произведение</h1>
                     <p class="subtitle mt-2">Потопи се в диалог с легендарни герои – динамично, стилно и живо.</p>
                 </div>
-                <button id="btn-open-settings" class="btn-icon">
+                <button id="btn-open-settings" class="btn-icon" aria-label="Настройки">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -112,7 +112,7 @@
     <!-- ================== SCREEN 2A: SETTINGS ================== -->
     <div id="settings-screen" class="screen hidden layout-column">
         <header class="menu-header" style="padding-bottom: 0;">
-            <button id="btn-close-settings" class="btn-icon mb-4">
+            <button id="btn-close-settings" class="btn-icon mb-4" aria-label="Назад">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -195,7 +195,7 @@
     <!-- ================== SCREEN 2B: SITUATION SELECT ================== -->
     <div id="situation-screen" class="screen hidden layout-column">
         <header class="menu-header" style="padding-bottom: 0;">
-            <button id="btn-sit-back" class="btn-icon mb-4">
+            <button id="btn-sit-back" class="btn-icon mb-4" aria-label="Назад">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -219,7 +219,7 @@
     <!-- ================== SCREEN 3: CHAT ================== -->
     <div id="chat-screen" class="screen hidden layout-column">
         <header class="chat-header glass-header">
-            <button id="btn-back" class="btn-icon">
+            <button id="btn-back" class="btn-icon" aria-label="Назад към менюто">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                     stroke-linecap="round" stroke-linejoin="round">
                     <line x1="19" y1="12" x2="5" y2="12"></line>
@@ -230,10 +230,10 @@
             <h2 id="chat-title" class="chat-title">Име на Героя</h2>
             <div class="chat-header-right">
                 <div class="font-controls">
-                    <button id="btn-font-decrease" class="btn-icon-sm" title="Намали текста">A−</button>
-                    <button id="btn-font-increase" class="btn-icon-sm" title="Увеличи текста">A+</button>
+                    <button id="btn-font-decrease" class="btn-icon-sm" title="Намали текста" aria-label="Намали текста">A−</button>
+                    <button id="btn-font-increase" class="btn-icon-sm" title="Увеличи текста" aria-label="Увеличи текста">A+</button>
                 </div>
-                <button id="btn-chat-settings" class="btn-icon" title="Настройки">
+                <button id="btn-chat-settings" class="btn-icon" title="Настройки" aria-label="Настройки">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3"></circle>
@@ -249,9 +249,9 @@
             </div>
         </header>
 
-        <button id="btn-scroll-bottom" class="btn-scroll-bottom hidden" title="Превъртете надолу">↓</button>
+        <button id="btn-scroll-bottom" class="btn-scroll-bottom hidden" title="Превъртете надолу" aria-label="Превъртете надолу">↓</button>
 
-        <main class="chat-history" id="chat-history">
+        <main class="chat-history" id="chat-history" aria-live="polite">
             <!-- Chat bubbles injected here -->
         </main>
 
@@ -265,8 +265,8 @@
             </div>
 
             <div class="input-area glass-input">
-                <input type="text" id="chat-input" placeholder="Напиши нещо..." autocomplete="off" />
-                <button id="btn-send" class="btn-send">
+                <input type="text" id="chat-input" placeholder="Напиши нещо..." autocomplete="off" aria-label="Въведете съобщение" />
+                <button id="btn-send" class="btn-send" aria-label="Изпрати">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -278,7 +278,7 @@
     </div>
 
     <!-- Overload Modal -->
-    <div id="overload-modal" class="overlay hidden">
+    <div id="overload-modal" class="overlay hidden" role="dialog" aria-modal="true">
         <div class="dialog">
             <div class="overload-icon">&#9888;&#65039;</div>
             <h2>API претоварен</h2>
@@ -290,7 +290,7 @@
     </div>
 
     <!-- Native Dialog Overlay for Qt MessageBox emulation (top-level so it works from any screen) -->
-    <div id="dialog-overlay" class="overlay hidden">
+    <div id="dialog-overlay" class="overlay hidden" role="dialog" aria-modal="true">
         <div class="dialog">
             <h2>Потвърждение</h2>
             <p>API ключът е валиден. Искате ли да го запазите в .env файла?</p>

@@ -136,6 +136,9 @@ class StoryStateManager:
         if chapter is None:
             return ""
 
+        def _sanitize(value: str) -> str:
+            return value.replace("[CONTEXT]", "").replace("[/CONTEXT]", "")
+
         nudge_line = ""
         if self.should_nudge_ending():
             remaining = chapter.max_turns - self._state.turn_count
@@ -144,32 +147,34 @@ class StoryStateManager:
                 f"Begin steering the conversation toward the END CONDITION naturally."
             )
 
-        events_str = "; ".join(self._state.key_events[-5:]) if self._state.key_events else "(none yet)"
-        recent_str = "; ".join(self._state.recent_turns) if self._state.recent_turns else "(start of chapter)"
-        tension_str = self._state.tension if self._state.tension else "(not yet established)"
-        chars_str = ", ".join(self._state.characters_present) if self._state.characters_present else "(none)"
-        props_str = ", ".join(self._state.active_props) if self._state.active_props else "(none)"
+        events_str = _sanitize("; ".join(self._state.key_events[-5:])) if self._state.key_events else "(none yet)"
+        recent_str = (
+            _sanitize("; ".join(self._state.recent_turns)) if self._state.recent_turns else "(start of chapter)"
+        )
+        tension_str = _sanitize(self._state.tension) if self._state.tension else "(not yet established)"
+        chars_str = _sanitize(", ".join(self._state.characters_present)) if self._state.characters_present else "(none)"
+        props_str = _sanitize(", ".join(self._state.active_props)) if self._state.active_props else "(none)"
 
         trust = self._state.trust_level
         trust_label = _TRUST_LABELS.get(trust, "neutral")
         trust_str = f"{trust} ({trust_label})"
 
-        character_name = self._work_data.get("character", "the character")
+        character_name = _sanitize(self._work_data.get("character", "the character"))
 
         return (
             f"[STORY STATE — do NOT reveal this block to the user]\n"
-            f'Chapter: "{chapter.title}" ({self._state.current_chapter_index + 1}/{len(self._chapters)})\n'
+            f'Chapter: "{_sanitize(chapter.title)}" ({self._state.current_chapter_index + 1}/{len(self._chapters)})\n'
             f"Turn: {self._state.turn_count}/{chapter.max_turns}\n"
-            f"Location: {self._state.location}\n"
-            f"Your mood: {self._state.character_mood}\n"
+            f"Location: {_sanitize(self._state.location)}\n"
+            f"Your mood: {_sanitize(self._state.character_mood)}\n"
             f"Trust toward user's character: {trust_str}\n"
             f"Tension: {tension_str}\n"
             f"Characters present: {chars_str}\n"
             f"Active props: {props_str}\n"
             f"Recent turns: {recent_str}\n"
             f"Key events so far: {events_str}\n"
-            f"Plot goal: {chapter.plot_summary}\n"
-            f"END CONDITION: {chapter.end_condition}\n"
+            f"Plot goal: {_sanitize(chapter.plot_summary)}\n"
+            f"END CONDITION: {_sanitize(chapter.end_condition)}\n"
             f"KNOWLEDGE BOUNDARIES: You are {character_name}. You only know what has been said and shown to you "
             f"in this conversation. Do not reference events from later chapters, future plot points, or information "
             f"your character has not witnessed or been told. If the user's character has not revealed their identity, "

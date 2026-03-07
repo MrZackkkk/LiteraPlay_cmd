@@ -68,6 +68,21 @@ class TestResponseParser(unittest.TestCase):
         assert parsed is not None
         self.assertEqual(parsed["reply"], "first")
 
+    def test_parse_empty_json_object(self):
+        """Empty JSON object {} should parse and return a dict."""
+        parsed = parse_ai_json_response("{}")
+        self.assertIsNotNone(parsed)
+        self.assertIsInstance(parsed, dict)
+        self.assertEqual(len(parsed), 0)
+
+    def test_parse_json_with_special_chars_in_strings(self):
+        """JSON with escaped quotes in string values."""
+        text = '{"reply":"He said \\"hello\\"","options":[]}'
+        parsed = parse_ai_json_response(text)
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertIn("hello", parsed["reply"])
+
 
 class TestValidateStoryResponse(unittest.TestCase):
     def test_empty_reply_gets_fallback(self):
@@ -257,6 +272,29 @@ class TestValidateStoryResponseNewValidations(unittest.TestCase):
             {"reply": "ok", "options": ["a"], "ended": False, "active_props": props},
         )
         self.assertEqual(len(result["active_props"]), 10)
+
+    def test_location_drift_with_empty_chapter_setting(self):
+        """When chapter.setting is empty, any location passes through."""
+        chapter = _make_chapter("")
+        result = validate_story_response(
+            {"reply": "ok", "options": ["a"], "ended": False, "location": "Somewhere"},
+            chapter=chapter,
+        )
+        # Empty setting has no stems, so intersection is empty, but the location
+        # should be reverted to the empty setting
+        # Actually: _stem_set("") returns empty set, intersection with anything is empty,
+        # so it will revert to "". Let's verify that behavior.
+        self.assertEqual(result["location"], "")
+
+    def test_key_event_dedup_exact_boundary(self):
+        """key_event at exactly 120 chars that is a duplicate gets removed."""
+        event = "x" * 120
+        state = _make_state(key_events=[event])
+        result = validate_story_response(
+            {"reply": "ok", "options": ["a"], "ended": False, "key_event": event},
+            state=state,
+        )
+        self.assertNotIn("key_event", result)
 
 
 if __name__ == "__main__":

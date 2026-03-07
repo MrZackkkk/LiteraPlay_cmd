@@ -131,11 +131,7 @@ def validate_story_response(
             # Extract tokens longer than 2 chars, then compare by _STEM_PREFIX_LEN-char prefix
             # to handle Bulgarian inflections (e.g. "Оборът" vs "обора" both share "обор").
             def _stem_set(text: str) -> set[str]:
-                return {
-                    w.lower()[:_STEM_PREFIX_LEN]
-                    for w in _NON_WORD_RE.sub("", text).split()
-                    if len(w) > 2
-                }
+                return {w.lower()[:_STEM_PREFIX_LEN] for w in _NON_WORD_RE.sub("", text).split() if len(w) > 2}
 
             setting_stems = _stem_set(chapter.setting)
             location_stems = _stem_set(ai_location)

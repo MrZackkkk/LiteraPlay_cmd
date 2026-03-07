@@ -255,6 +255,25 @@ class TestSanitizeApiError(unittest.TestCase):
         result = _sanitize_api_error(exc, "test-key")
         self.assertIn("Model not found: gemini-pro", result)
 
+    def test_strips_bearer_token_pattern(self):
+        """Key appearing as bearer token should be scrubbed."""
+        from literaplay.ai_service import _sanitize_api_error
+
+        key = "sk-proj-abc123xyz"
+        exc = Exception(f"Authorization: Bearer {key}")
+        result = _sanitize_api_error(exc, key)
+        self.assertNotIn(key, result)
+
+    def test_multiple_key_occurrences(self):
+        """All occurrences of the key in the message should be replaced."""
+        from literaplay.ai_service import _sanitize_api_error
+
+        key = "test-key-123"
+        exc = Exception(f"Error {key} and also {key}")
+        result = _sanitize_api_error(exc, key)
+        self.assertNotIn(key, result)
+        self.assertEqual(result.count("***"), 2)
+
 
 class TestValidateApiKey(unittest.TestCase):
     @patch("literaplay.config.PROVIDER_MODELS", {"gemini": {"default": "gemini-test", "models": []}})
@@ -338,6 +357,34 @@ class TestChatSession(unittest.TestCase):
         session = ChatSession("unknown", None, "model", "prompt")
         with self.assertRaises(ValueError):
             session.send_message("hello")
+
+
+class TestRetryDelayDoubling(unittest.TestCase):
+    """Test that retry delay doubles between attempts."""
+
+    @patch("literaplay.ai_service._interruptible_sleep")
+    @patch("google.genai.Client")
+    def test_retry_delay_doubles(self, mock_client_cls, mock_sleep):
+        from literaplay.ai_service import AIService, APIOverloadedError, ChatSession
+
+        service = AIService("gemini", "fake_key", "fake_model")
+
+        mock_gemini_chat = MagicMock()
+        mock_gemini_chat.send_message.side_effect = Exception("429 rate limit")
+
+        chat_session = ChatSession("gemini", service.client, "fake_model", "prompt")
+        chat_session._gemini_chat = mock_gemini_chat
+
+        with self.assertRaises(APIOverloadedError):
+            service.send_message(chat_session, "Hello")
+
+        # Collect all sleep durations (each retry sleeps in 500ms chunks)
+        sleep_calls = [call[0][0] for call in mock_sleep.call_args_list]
+        # First retry: 5s = 10x500ms, Second retry: 10s = 20x500ms
+        # Total sleep calls should be 30 (10 + 20)
+        total_sleep_ms = sum(sleep_calls)
+        # First retry = 5000ms, second = 10000ms = 15000ms total
+        self.assertEqual(total_sleep_ms, 15000)
 
 
 if __name__ == "__main__":

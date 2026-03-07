@@ -46,7 +46,7 @@ def _fallback_load_dotenv(dotenv_path: str = ".env") -> bool:
     return True
 
 
-def _fallback_set_key(dotenv_path: str, key: str, value: str):
+def _fallback_set_key(dotenv_path: str, key: str, value: str) -> tuple[bool, str, str]:
     env_file = Path(dotenv_path)
     lines = []
 

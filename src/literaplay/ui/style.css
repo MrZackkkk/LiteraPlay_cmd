@@ -18,6 +18,12 @@
 
     --error: #ef4444;
     --warning: #f59e0b;
+
+    --z-base: 1;
+    --z-sticky: 10;
+    --z-overlay: 100;
+    --z-dropdown: 200;
+    --z-modal: 1000;
 }
 
 * {
@@ -140,14 +146,12 @@ button {
 }
 
 .settings-card {
-    width: 100%;
-    max-width: 600px;
     background: rgba(24, 24, 27, 0.4);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 20px;
-    padding: 24px;
+    padding: 28px;
     box-shadow: 0 24px 48px -12px rgba(0, 0, 0, 0.5);
     display: flex;
     flex-direction: column;
@@ -216,7 +220,7 @@ button {
     top: calc(100% + 8px);
     left: 0;
     right: 0;
-    z-index: 1000;
+    z-index: var(--z-dropdown);
     overflow: hidden;
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
 }
@@ -240,12 +244,13 @@ button {
 }
 
 .settings-grid {
-    padding: 20px 50px 50px;
-    overflow-y: visible;
-    /* Crucial: allow dropdown to break out if needed */
-    display: flex;
-    flex-direction: column;
+    padding: 20px 32px 40px;
+    flex: 1;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
     gap: 24px;
+    align-items: stretch;
 }
 
 .input-group input:focus {
@@ -276,7 +281,7 @@ button {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 100;
+    z-index: var(--z-overlay);
 }
 
 .dialog {
@@ -701,7 +706,7 @@ button {
 
 .screen {
     position: relative;
-    z-index: 1;
+    z-index: var(--z-base);
 }
 
 .screen::before {
@@ -777,7 +782,7 @@ button {
     align-items: center;
     justify-content: center;
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-    z-index: 10;
+    z-index: var(--z-sticky);
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -1068,4 +1073,36 @@ button {
     user-select: none;
     z-index: 0;
     letter-spacing: -0.02em;
+}
+
+/* ================== RESPONSIVE ================== */
+@media (max-width: 768px) {
+    .settings-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .provider-btn {
+        min-width: 80px;
+        padding: 14px 16px;
+    }
+
+    .cards-grid {
+        padding: 16px 20px 40px;
+    }
+
+    .menu-header {
+        padding: 24px 20px 16px;
+    }
+
+    .chat-header {
+        padding: 0 16px;
+    }
+
+    .chat-history {
+        padding: 16px;
+    }
+
+    .chat-footer {
+        padding: 12px 16px 20px;
+    }
 }

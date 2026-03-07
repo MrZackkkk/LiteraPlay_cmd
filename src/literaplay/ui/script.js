@@ -11,6 +11,7 @@ let _apiContext = "setup"; // "setup" | "settings"
 let previousScreen = "menu";
 let currentFontSize = 16;
 let _isLoading = false;
+let _selectAbortController = null;
 
 // Provider-specific hints shown below the API key input
 const PROVIDER_HINTS = {
@@ -332,6 +333,9 @@ function setupCustomSelect() {
 
     if (!selected || !items || !hiddenInput) return;
 
+    if (_selectAbortController) _selectAbortController.abort();
+    _selectAbortController = new AbortController();
+
     // Remove old listeners by cloning
     const newSelected = selected.cloneNode(true);
     selected.parentNode.replaceChild(newSelected, selected);
@@ -377,7 +381,7 @@ function setupCustomSelect() {
             newSelected.classList.remove("select-arrow-active");
             items.classList.add("select-hide");
         }
-    });
+    }, { signal: _selectAbortController.signal });
 }
 
 function showScreen(name) {
@@ -396,6 +400,8 @@ function handleApiValidation(isValid, message) {
     const verifyBtn = document.getElementById(inSettings ? "btn-verify-settings" : "btn-verify");
     const keyInput  = document.getElementById(inSettings ? "settings-api-key-input" : "api-key-input");
     const statusEl  = document.getElementById(inSettings ? "settings-api-status" : "api-status");
+
+    if (!verifyBtn || !statusEl) return;
 
     verifyBtn.disabled = false;
     verifyBtn.innerText = "Verify & Save";
@@ -536,12 +542,11 @@ function startChat(workKey, sitKey) {
     const typingInd = document.getElementById("typing-indicator");
     if (typingInd) {
         typingInd.classList.add("hidden");
-        typingInd.style.display = "none";
     }
 
     // Reset scroll-to-bottom button and chat footer
     document.getElementById("btn-scroll-bottom").classList.add("hidden");
-    document.querySelector(".chat-footer").style.display = "";
+    document.querySelector(".chat-footer").classList.remove("hidden");
 
     showScreen("chat");
 
@@ -558,7 +563,7 @@ function handleChatEnded(finalText) {
     _renderChatMessage("System", "\n" + finalText, false, true);
 
     document.getElementById("chat-options").innerHTML = "";
-    document.querySelector(".chat-footer").style.display = "none";
+    document.querySelector(".chat-footer").classList.add("hidden");
 
     const history = document.getElementById("chat-history");
     const btnWrapper = document.createElement("div");
@@ -572,7 +577,7 @@ function handleChatEnded(finalText) {
     btn.style.fontSize = "1rem";
     btn.style.padding = "0.75rem 2rem";
     btn.onclick = () => {
-        document.querySelector(".chat-footer").style.display = "";
+        document.querySelector(".chat-footer").classList.remove("hidden");
         showScreen("menu");
     };
 
@@ -686,13 +691,13 @@ function renderChatOptions(optionsJson) {
         labelSpan.textContent = isCanonical ? `📖 ${displayText}` : displayText;
         btn.appendChild(labelSpan);
 
-        btn.onmouseover = () => { if (!isCanonical) btn.style.borderColor = currentColor; };
-        btn.onmouseout = () => { if (!isCanonical) btn.style.borderColor = "var(--border)"; };
-        btn.onclick = () => {
+        btn.addEventListener("mouseover", () => { if (!isCanonical) btn.style.borderColor = currentColor; });
+        btn.addEventListener("mouseout", () => { if (!isCanonical) btn.style.borderColor = "var(--border)"; });
+        btn.addEventListener("click", () => {
             _renderChatMessage(currentUserCharacter, displayText, true, false);
             container.innerHTML = "";
             backend.send_user_message(opt);
-        };
+        });
 
         container.appendChild(btn);
     });
@@ -729,14 +734,12 @@ function toggleLoading(isLoading) {
 
     if (isLoading) {
         ind.classList.remove("hidden");
-        ind.style.display = "block";
         input.disabled = true;
         btn.disabled = true;
         statusEl.classList.add("busy");
         statusLabel.textContent = "Мисли...";
     } else {
         ind.classList.add("hidden");
-        ind.style.display = "none";
         input.disabled = false;
         updateSendButton();
         input.focus();

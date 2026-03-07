@@ -17,12 +17,15 @@ from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
-from literaplay.ai_service import AIService, APIOverloadedError, validate_api_key
+from literaplay.ai_service import AIService, APIOverloadedError, ChatSession, validate_api_key
 from literaplay.data import LIBRARY
 from literaplay.response_parser import parse_ai_json_response, validate_story_response
 from literaplay.story_state import StoryStateManager
 
 UI_PATH = Path(__file__).parent / "ui" / "index.html"
+
+_WORKER_STACK_SIZE = 4 * 1024 * 1024  # 4 MB — google-genai overflows the default 512 KB
+_WORKER_WAIT_TIMEOUT_MS = 3000
 
 
 _LIBRARY_JSON_CACHE: str | None = None
@@ -50,9 +53,9 @@ class AIChatWorker(QThread):
     error_signal = Signal(str)
     overload_signal = Signal()
 
-    def __init__(self, ai_service, chat_session, user_text, context_injection=""):
+    def __init__(self, ai_service: AIService, chat_session: ChatSession, user_text: str, context_injection: str = ""):
         super().__init__()
-        self.setStackSize(4 * 1024 * 1024)  # 4 MB — google-genai overflows the default 512 KB
+        self.setStackSize(_WORKER_STACK_SIZE)
         self.ai_service = ai_service
         self.chat_session = chat_session
         self.user_text = user_text
@@ -101,7 +104,7 @@ class APIVerifyWorker(QThread):
 
     def __init__(self, provider: str, key: str):
         super().__init__()
-        self.setStackSize(4 * 1024 * 1024)  # 4 MB — google-genai overflows the default 512 KB
+        self.setStackSize(_WORKER_STACK_SIZE)
         self.provider = provider
         self.key = key
 
@@ -113,28 +116,23 @@ class APIVerifyWorker(QThread):
 # ================== BACKEND BRIDGE ==================
 
 
-def _format_reply_messages(reply, default_character: str) -> list[dict]:
+def _format_reply_messages(reply: list | str, default_character: str) -> list[dict]:
     """Normalise a reply (list-of-dicts or plain string) into message dicts."""
     if isinstance(reply, list):
         results = []
         for msg in reply:
-            results.append({
-                "sender": msg.get("character", default_character),
-                "text": msg.get("text", ""),
-                "isUser": msg.get("type", "npc") == "user",
-                "isSystem": msg.get("type", "npc") == "system"
-            })
+            results.append(
+                {
+                    "sender": msg.get("character", default_character),
+                    "text": msg.get("text", ""),
+                    "isUser": msg.get("type", "npc") == "user",
+                    "isSystem": msg.get("type", "npc") == "system",
+                }
+            )
         return results
     else:
         final_reply_text = str(reply)
-        return [
-            {
-                "sender": default_character,
-                "text": final_reply_text,
-                "isUser": False,
-                "isSystem": False
-            }
-        ]
+        return [{"sender": default_character, "text": final_reply_text, "isUser": False, "isSystem": False}]
 
 
 class BackendBridge(QObject):
@@ -169,6 +167,7 @@ class BackendBridge(QObject):
         # Keep strong references to running workers to prevent premature GC;
         # finished workers are removed automatically via _cleanup_worker.
         self._active_workers: list = []
+        self._chat_in_progress = False
 
         if config.API_KEY and config.PROVIDER:
             with contextlib.suppress(Exception):
@@ -228,6 +227,7 @@ class BackendBridge(QObject):
             self.providerModelsLoaded.emit(config.get_models_json(provider))
             self.libraryLoaded.emit(_build_library_json())
         except Exception as e:
+            logging.exception("Failed to initialize AI service")
             self.apiValidationResult.emit(False, str(e))
 
     @Slot(str)
@@ -241,6 +241,9 @@ class BackendBridge(QObject):
 
     @Slot(str)
     def save_model(self, model_name):
+        if self._chat_in_progress:
+            self.chatError.emit("Изчакайте текущото съобщение.")
+            return
         config.save_model_name(model_name)
         if config.API_KEY and config.PROVIDER:
             try:
@@ -249,6 +252,7 @@ class BackendBridge(QObject):
                     self.chat_session = self.ai_service.create_chat(self.current_work["prompt"])
                 self.currentModel.emit(config.DEFAULT_MODEL)
             except Exception as e:
+                logging.exception("Failed to update model")
                 self.chatError.emit(str(e))
 
     @Slot(str, str)
@@ -266,7 +270,6 @@ class BackendBridge(QObject):
         # Deep-copy sit_data so nested structures (e.g. chapters list)
         # are not shared with the original LIBRARY dict.
         self.current_work = copy.deepcopy(sit_data)
-        assert self.current_work is not None
         self.current_work["_key"] = sit_key
         self.chat_session = None
         self.story_manager = StoryStateManager(self.current_work)
@@ -283,6 +286,7 @@ class BackendBridge(QObject):
                 if self.story_manager.has_chapters:
                     self.storyProgressUpdated.emit(json.dumps(self.story_manager.get_progress_info()))
             except Exception as e:
+                logging.exception("Failed to start chat")
                 self.chatError.emit(str(e))
 
     # Maximum number of characters accepted from the user in a single message.
@@ -299,7 +303,7 @@ class BackendBridge(QObject):
         re.IGNORECASE,
     )
 
-    def _track_worker(self, worker) -> None:
+    def _track_worker(self, worker: QThread) -> None:
         """Keep a strong ref to *worker* and auto-remove it when finished."""
         self._active_workers.append(worker)
         worker.finished.connect(lambda w=worker: self._cleanup_worker(w))
@@ -310,13 +314,13 @@ class BackendBridge(QObject):
             self._active_workers.remove(worker)
 
     @Slot(str)
-    def send_user_message(self, text):
+    def send_user_message(self, text: str):
         if not self.ai_service or not self.chat_session:
             self.chatError.emit("Няма активна сесия.")
             return
 
-        # Double-send guard: ignore if a worker is already running
-        if self.worker is not None and self.worker.isRunning():
+        # Double-send guard: ignore if a chat request is already in progress
+        if self._chat_in_progress:
             return
 
         # Validate and cap input length
@@ -331,6 +335,7 @@ class BackendBridge(QObject):
         if not text:
             return
 
+        self._chat_in_progress = True
         self.loadingStateChanged.emit(True)
 
         # Build context injection from story state
@@ -361,6 +366,7 @@ class BackendBridge(QObject):
 
     @Slot(dict)
     def _on_chat_response_worker(self, data):
+        self._chat_in_progress = False
         self.loadingStateChanged.emit(False)
 
         # Validate & sanitize against story state
@@ -397,6 +403,7 @@ class BackendBridge(QObject):
                 try:
                     self.chat_session = ai_service.create_chat(current_work["prompt"])
                 except Exception as e:
+                    logging.exception("Chapter transition error")
                     self.chatError.emit(str(e))
                     return
                 self.storyProgressUpdated.emit(json.dumps(story_manager.get_progress_info()))
@@ -413,11 +420,13 @@ class BackendBridge(QObject):
 
     @Slot(str)
     def _on_chat_error_worker(self, message):
+        self._chat_in_progress = False
         self.loadingStateChanged.emit(False)
         self.chatError.emit(message)
 
     @Slot()
     def _on_chat_overload_worker(self):
+        self._chat_in_progress = False
         self.loadingStateChanged.emit(False)
         self.chatOverloaded.emit()
 
@@ -450,7 +459,7 @@ class MainWindow(QMainWindow):
         for worker in list(self.backend._active_workers):
             if worker is not None and worker.isRunning():
                 worker.quit()
-                worker.wait(3000)
+                worker.wait(_WORKER_WAIT_TIMEOUT_MS)
         super().closeEvent(event)
 
 
