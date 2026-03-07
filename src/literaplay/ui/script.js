@@ -15,9 +15,9 @@ let _selectAbortController = null;
 
 // Provider-specific hints shown below the API key input
 const PROVIDER_HINTS = {
-    openai: "Get your key at platform.openai.com",
-    gemini: "Free tier available at ai.google.dev",
-    anthropic: "Get your key at console.anthropic.com",
+    openai: "Вземи ключ от platform.openai.com",
+    gemini: "Безплатен достъп на ai.google.dev",
+    anthropic: "Вземи ключ от console.anthropic.com",
 };
 
 
@@ -88,7 +88,7 @@ function setupEventListeners() {
 
         _apiContext = "setup";
         document.getElementById("btn-verify").disabled = true;
-        document.getElementById("btn-verify").innerText = "Checking...";
+        document.getElementById("btn-verify").innerText = "Проверява се...";
         document.getElementById("api-status").innerText = "Проверка на API ключ...";
         _validatedApiKey = "";
         backend.verify_api_key(_selectedProvider, key);
@@ -101,7 +101,7 @@ function setupEventListeners() {
 
         _apiContext = "settings";
         document.getElementById("btn-verify-settings").disabled = true;
-        document.getElementById("btn-verify-settings").innerText = "Checking...";
+        document.getElementById("btn-verify-settings").innerText = "Проверява се...";
         document.getElementById("settings-api-status").innerText = "Проверка на API ключ...";
         _validatedApiKey = "";
         backend.verify_api_key(_selectedProvider, key);
@@ -214,7 +214,7 @@ function selectProvider(provider) {
     // Update card text for the chosen provider
     const names = { openai: "OpenAI", gemini: "Google Gemini", anthropic: "Anthropic Claude" };
     document.getElementById("api-card-subtitle").textContent =
-        `Enter your ${names[provider] || provider} API key to power the experience.`;
+        `Въведи своя ${names[provider] || provider} API ключ, за да стартираш.`;
 
     // Update hint
     document.getElementById("api-hint").textContent = PROVIDER_HINTS[provider] || "";
@@ -290,7 +290,7 @@ function rebuildModelPicker() {
         if (defaultDiv) defaultDiv.classList.add("same-as-selected");
     }
 
-    selected.textContent = matchedLabel || "Select a model";
+    selected.textContent = matchedLabel || "Избери модел";
 
     // Re-bind click handlers on the new options
     setupCustomSelect();
@@ -404,7 +404,7 @@ function handleApiValidation(isValid, message) {
     if (!verifyBtn || !statusEl) return;
 
     verifyBtn.disabled = false;
-    verifyBtn.innerText = "Verify & Save";
+    verifyBtn.innerText = "Запази промените";
 
     if (isValid) {
         // H-04: Cache the key at the moment we know it is valid
