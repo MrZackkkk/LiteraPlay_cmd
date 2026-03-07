@@ -6,6 +6,7 @@ let libraryData = {};
 // H-04: Cache the validated key at the moment it is confirmed valid.
 let _validatedApiKey = "";
 let _selectedProvider = "";
+let _apiContext = "setup"; // "setup" | "settings"
 
 let previousScreen = "menu";
 let currentFontSize = 16;
@@ -84,11 +85,29 @@ function setupEventListeners() {
         const key = document.getElementById("api-key-input").value.trim();
         if (!key || !_selectedProvider) return;
 
+        _apiContext = "setup";
         document.getElementById("btn-verify").disabled = true;
         document.getElementById("btn-verify").innerText = "Checking...";
         document.getElementById("api-status").innerText = "Проверка на API ключ...";
         _validatedApiKey = "";
         backend.verify_api_key(_selectedProvider, key);
+    });
+
+    // Settings Screen — provider card
+    document.getElementById("btn-verify-settings").addEventListener("click", () => {
+        const key = document.getElementById("settings-api-key-input").value.trim();
+        if (!key || !_selectedProvider) return;
+
+        _apiContext = "settings";
+        document.getElementById("btn-verify-settings").disabled = true;
+        document.getElementById("btn-verify-settings").innerText = "Checking...";
+        document.getElementById("settings-api-status").innerText = "Проверка на API ключ...";
+        _validatedApiKey = "";
+        backend.verify_api_key(_selectedProvider, key);
+    });
+
+    document.querySelectorAll(".settings-provider-btn").forEach(btn => {
+        btn.addEventListener("click", () => selectSettingsProvider(btn.dataset.provider));
     });
 
     document.getElementById("btn-dialog-no").addEventListener("click", () => {
@@ -205,6 +224,17 @@ function selectProvider(provider) {
     document.getElementById("api-key-input").focus();
 
     // Tell backend about provider choice (for model list)
+    if (backend) backend.set_provider(provider);
+}
+
+function selectSettingsProvider(provider) {
+    _selectedProvider = provider;
+    document.querySelectorAll(".settings-provider-btn").forEach(btn => {
+        btn.classList.toggle("selected", btn.dataset.provider === provider);
+    });
+    document.getElementById("settings-api-hint").textContent = PROVIDER_HINTS[provider] || "";
+    document.getElementById("settings-api-key-input").value = "";
+    document.getElementById("settings-api-status").innerText = "";
     if (backend) backend.set_provider(provider);
 }
 
@@ -362,27 +392,34 @@ function showScreen(name) {
 // === Python Signal Handlers ===
 
 function handleApiValidation(isValid, message) {
-    document.getElementById("btn-verify").disabled = false;
-    document.getElementById("btn-verify").innerText = "Verify & Save";
+    const inSettings = _apiContext === "settings";
+    const verifyBtn = document.getElementById(inSettings ? "btn-verify-settings" : "btn-verify");
+    const keyInput  = document.getElementById(inSettings ? "settings-api-key-input" : "api-key-input");
+    const statusEl  = document.getElementById(inSettings ? "settings-api-status" : "api-status");
+
+    verifyBtn.disabled = false;
+    verifyBtn.innerText = "Verify & Save";
 
     if (isValid) {
         // H-04: Cache the key at the moment we know it is valid
-        _validatedApiKey = document.getElementById("api-key-input").value.trim();
-        document.getElementById("api-status").innerText = "";
+        _validatedApiKey = keyInput.value.trim();
+        statusEl.innerText = "";
         document.getElementById("dialog-overlay").classList.remove("hidden");
     } else {
         _validatedApiKey = "";
-        document.getElementById("api-status").style.color = "var(--error)";
-        document.getElementById("api-status").innerText = message;
+        statusEl.style.color = "var(--error)";
+        statusEl.innerText = message;
     }
 }
 
 function handleCurrentProvider(provider) {
     _selectedProvider = provider;
-    // Highlight the provider button if on api screen
     document.querySelectorAll(".provider-btn").forEach(btn => {
         btn.classList.toggle("selected", btn.dataset.provider === provider);
     });
+    const providerNames = { openai: "OpenAI", gemini: "Gemini", anthropic: "Claude" };
+    const subtitle = document.getElementById("settings-model-subtitle");
+    if (subtitle) subtitle.textContent = `Избери кой ${providerNames[provider] || provider} модел да генерира историята.`;
 }
 
 function handleCurrentModel(modelName) {

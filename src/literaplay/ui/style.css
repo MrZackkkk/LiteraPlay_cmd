@@ -1029,6 +1029,18 @@ button {
     font-weight: 600;
 }
 
+/* Compact provider buttons inside settings card */
+.settings-provider-btn {
+    padding: 12px 16px;
+    min-width: 88px;
+    gap: 6px;
+}
+
+.settings-provider-btn .provider-logo {
+    width: 36px;
+    height: 36px;
+}
+
 /* API card slide-in when provider is picked */
 .api-card-enter {
     animation: slideUpFade 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
