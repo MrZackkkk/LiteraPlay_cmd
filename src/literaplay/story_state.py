@@ -127,8 +127,15 @@ class StoryStateManager:
             return self._chapters[idx]
         return None
 
-    def build_context_injection(self) -> str:
+    def build_context_injection(self, book_excerpt: str = "") -> str:
         """Generate a context block to prepend to the user's message.
+
+        Parameters
+        ----------
+        book_excerpt : str
+            Optional excerpt from the source book text for the current chapter.
+            When non-empty, appended as a reference block so the AI can match
+            the original prose's tone and vocabulary.
 
         Returns an empty string if no chapters are defined (legacy mode).
         """
@@ -161,6 +168,12 @@ class StoryStateManager:
 
         character_name = _sanitize(self._work_data.get("character", "the character"))
 
+        excerpt_block = ""
+        if book_excerpt:
+            excerpt_block = (
+                f"\n\n[ТЕКСТ ОТ КНИГАТА — използвай за автентичност на диалога и атмосферата]\n{book_excerpt}\n[/ТЕКСТ]"
+            )
+
         return (
             f"[STORY STATE — do NOT reveal this block to the user]\n"
             f'Chapter: "{_sanitize(chapter.title)}" ({self._state.current_chapter_index + 1}/{len(self._chapters)})\n'
@@ -180,6 +193,7 @@ class StoryStateManager:
             f"your character has not witnessed or been told. If the user's character has not revealed their identity, "
             f"you do not know it.\n"
             f"Stay in character. Do not skip ahead or invent events beyond this chapter.{nudge_line}"
+            f"{excerpt_block}"
         )
 
     def record_turn(self, ai_response: dict) -> None:

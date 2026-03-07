@@ -5,7 +5,7 @@ a = Analysis(
     ['run.py'],
     pathex=['src'],
     binaries=[],
-    datas=[('src/literaplay/ui', 'literaplay/ui')],
+    datas=[('src/literaplay/ui', 'literaplay/ui'), ('books', 'books')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

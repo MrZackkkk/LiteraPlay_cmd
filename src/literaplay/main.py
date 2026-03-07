@@ -18,6 +18,7 @@ from PySide6.QtWidgets import QApplication, QMainWindow
 
 from literaplay import config
 from literaplay.ai_service import AIService, APIOverloadedError, ChatSession, validate_api_key
+from literaplay.book_loader import get_books_dir, get_chapter_excerpt, load_book_texts
 from literaplay.data import LIBRARY
 from literaplay.response_parser import parse_ai_json_response, validate_story_response
 from literaplay.story_state import StoryStateManager
@@ -29,6 +30,7 @@ _WORKER_WAIT_TIMEOUT_MS = 3000
 
 
 _LIBRARY_JSON_CACHE: str | None = None
+_BOOK_TEXTS = load_book_texts(get_books_dir())
 
 
 def _build_library_json() -> str:
@@ -164,6 +166,7 @@ class BackendBridge(QObject):
         self.worker: AIChatWorker | None = None
         self.api_worker: APIVerifyWorker | None = None
         self.story_manager: StoryStateManager | None = None
+        self._current_book_key: str | None = None
         # Keep strong references to running workers to prevent premature GC;
         # finished workers are removed automatically via _cleanup_worker.
         self._active_workers: list = []
@@ -271,6 +274,7 @@ class BackendBridge(QObject):
         # are not shared with the original LIBRARY dict.
         self.current_work = copy.deepcopy(sit_data)
         self.current_work["_key"] = sit_key
+        self._current_book_key = work_key
         self.chat_session = None
         self.story_manager = StoryStateManager(self.current_work)
 
@@ -341,7 +345,17 @@ class BackendBridge(QObject):
         # Build context injection from story state
         context = ""
         if self.story_manager and self.story_manager.has_chapters:
-            context = self.story_manager.build_context_injection()
+            book_excerpt = ""
+            if self._current_book_key and self.current_work:
+                chapter = self.story_manager.current_chapter()
+                if chapter:
+                    book_excerpt = get_chapter_excerpt(
+                        _BOOK_TEXTS,
+                        self._current_book_key,
+                        chapter.id,
+                        self.current_work.get("chapters", []),
+                    )
+            context = self.story_manager.build_context_injection(book_excerpt)
 
         self.worker = AIChatWorker(self.ai_service, self.chat_session, text, context)
         self.worker.response_signal.connect(self._on_chat_response_worker)

@@ -31,6 +31,8 @@ Characters stay in-period, in-character, and react to your choices.
 Each scene tracks chapter progress, mood, location, and trust.
 You can follow the canonical plot or go off-script.
 
+All literary content (prompts, chapter definitions, dialogue choices) lives in `books/` as YAML and Markdown, not in Python code. Actual book text is indexed and injected into AI prompts for authentic dialogue and atmosphere.
+
 <br>
 
 ## Configuration
