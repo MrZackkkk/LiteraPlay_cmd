@@ -1,0 +1,3 @@
+## 2024-05-24 - Hidden Focus Outlines on Custom Inputs
+**Learning:** When creating custom input wrappers (like `.glass-input`) that strip the native outline from the inner `<input>` element (`outline: none`), keyboard users lose all visual indication of focus unless a `:focus-within` style is applied to the wrapper itself. This is a common accessibility trap in modern "glassmorphism" designs.
+**Action:** Always pair `outline: none` on inner inputs with a `:focus-within` state on their container, typically using the theme's `--accent` color to maintain design consistency while ensuring keyboard accessibility.
