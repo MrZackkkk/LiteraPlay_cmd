@@ -636,11 +636,18 @@ function _renderChatMessage(sender, text, isUser, isSystem) {
             const copyBtn = document.createElement("button");
             copyBtn.className = "btn-copy";
             copyBtn.title = "Копирай";
+            copyBtn.setAttribute("aria-label", "Копирай съобщението");
             copyBtn.textContent = "⧉";
             copyBtn.onclick = () => {
                 copyToClipboard(text);
                 copyBtn.textContent = "✓";
-                setTimeout(() => { copyBtn.textContent = "⧉"; }, 1500);
+                copyBtn.title = "Копирано!";
+                copyBtn.setAttribute("aria-label", "Съобщението е копирано");
+                setTimeout(() => {
+                    copyBtn.textContent = "⧉";
+                    copyBtn.title = "Копирай";
+                    copyBtn.setAttribute("aria-label", "Копирай съобщението");
+                }, 1500);
             };
             msgFooter.appendChild(copyBtn);
         }
