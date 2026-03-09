@@ -1,0 +1,3 @@
+## 2024-05-18 - Missing Focus Outlines & Placeholders Instead of ARIA Labels
+**Learning:** This app frequently removes default focus outlines without replacing them (e.g., `outline: none` on inputs), harming keyboard navigation accessibility. Additionally, input fields rely heavily on `placeholder` text instead of proper `<label>` elements or `aria-label` attributes, making them inaccessible to screen readers.
+**Action:** Always check for focus indicators when auditing components here, and actively add `*:focus-visible` to restore global accessibility. When encountering inputs, do not assume placeholders are sufficient; always add explicit `aria-label`s.
