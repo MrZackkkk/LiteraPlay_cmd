@@ -837,6 +837,12 @@ button {
     color: var(--text-primary);
 }
 
+.btn-copy:focus-visible {
+    opacity: 1;
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 /* Keyboard shortcut badge on option buttons */
 .option-key-hint {
     display: inline-flex;
