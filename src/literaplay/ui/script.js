@@ -636,6 +636,7 @@ function _renderChatMessage(sender, text, isUser, isSystem) {
             const copyBtn = document.createElement("button");
             copyBtn.className = "btn-copy";
             copyBtn.title = "Копирай";
+            copyBtn.setAttribute("aria-label", "Копирай съобщението");
             copyBtn.textContent = "⧉";
             copyBtn.onclick = () => {
                 copyToClipboard(text);
