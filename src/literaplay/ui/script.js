@@ -306,6 +306,7 @@ function updateSendButton() {
     const btn = document.getElementById("btn-send");
     const hasText = document.getElementById("chat-input").value.trim().length > 0;
     btn.disabled = !hasText;
+    btn.title = hasText ? "Изпрати съобщението" : "Въведете текст, за да изпратите";
 }
 
 function initScrollToBottom() {
@@ -636,6 +637,7 @@ function _renderChatMessage(sender, text, isUser, isSystem) {
             const copyBtn = document.createElement("button");
             copyBtn.className = "btn-copy";
             copyBtn.title = "Копирай";
+            copyBtn.setAttribute("aria-label", "Копирай съобщението");
             copyBtn.textContent = "⧉";
             copyBtn.onclick = () => {
                 copyToClipboard(text);
