@@ -42,6 +42,11 @@ body {
     line-height: 1.5;
 }
 
+*:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
 /* Utilities */
 .hidden {
     display: none !important;
@@ -653,6 +658,10 @@ button {
     font-size: 14px;
     font-weight: 500;
     outline: none;
+}
+
+.glass-input:focus-within {
+    border-color: var(--accent);
 }
 
 

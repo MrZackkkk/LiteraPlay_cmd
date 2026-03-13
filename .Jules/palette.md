@@ -1,0 +1,3 @@
+## 2024-05-14 - Keyboard Focus in Glassmorphism UIs
+**Learning:** Using `outline: none` on inputs inside stylized containers (like `.glass-input`) completely removes keyboard focus visibility, making it impossible for keyboard users to know when the input is active.
+**Action:** When removing the native outline from an input, always add a `:focus-within` styling to the parent container (e.g., changing its border color) to restore visible focus indication.
