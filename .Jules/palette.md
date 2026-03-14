@@ -1,0 +1,3 @@
+## 2024-05-14 - Focus states on composite inputs
+**Learning:** When using custom input components wrapped in a visually-styled container (like `.glass-input`), removing the default `outline` from the inner `<input>` element causes a total loss of keyboard focus visibility.
+**Action:** Always apply a `:focus-within` state to the parent container when relying on a wrapper for input styling, so that keyboard users have a visible focus indicator.
