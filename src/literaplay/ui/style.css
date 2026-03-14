@@ -644,6 +644,10 @@ button {
     padding: 8px 8px 8px 20px;
 }
 
+.glass-input:focus-within {
+    border-color: var(--accent);
+}
+
 .glass-input input {
     flex: 1;
     background: transparent;
