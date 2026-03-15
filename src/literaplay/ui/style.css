@@ -642,6 +642,11 @@ button {
     display: flex;
     align-items: center;
     padding: 8px 8px 8px 20px;
+    transition: all 0.2s;
+}
+
+.glass-input:focus-within {
+    border-color: var(--accent);
 }
 
 .glass-input input {
